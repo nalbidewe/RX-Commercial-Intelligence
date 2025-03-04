@@ -1,1 +1,1 @@
-# ds-ai-content-generator
+# rx_content_gen_chainlit
