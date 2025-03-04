@@ -225,6 +225,7 @@ async def on_chat_start():
             #await cl.Message(content=f"Responses collected: {user_responses}").send()
             prompt_template = "\n".join(USER_INPUT["content_gen_prompt"])
             user_selections = "\n".join(USER_SELECTION_MSG["selections"])
+            
         
             # Use string formatting with the responses collected
             filled_prompt = prompt_template.format(
