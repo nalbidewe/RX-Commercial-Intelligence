@@ -71,7 +71,7 @@ CONNECTION_STRING = "mongodb+srv://"+urllib.parse.quote_plus(username)+":" + url
 # Connect to Azure Cosmos MongoDB
 client = MongoClient(CONNECTION_STRING)
 
-db = client["AIPolicyApps"]
+db = client["AIContentGenApp"]
 collection = db["Users"]
 
 
