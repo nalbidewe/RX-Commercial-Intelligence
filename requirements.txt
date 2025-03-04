@@ -1,0 +1,16 @@
+chainlit==2.2.0
+langchain
+langgraph
+langchain-community
+langchain-core
+langchain-openai
+python-dotenv
+azure-identity
+azure-keyvault-secrets
+azure-storage-blob
+cryptography
+python-docx
+psycopg
+psycopg[binary]
+asyncpg
+aiohttp
