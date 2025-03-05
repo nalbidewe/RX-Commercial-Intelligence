@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: [self-hosted, prod-runner]
+    runs-on: self-hosted
 
     steps:
       # Logs in with your Azure credentials
@@ -35,7 +35,7 @@ jobs:
       actions: read
       contents: read
       id-token: write
-    runs-on: [self-hosted, prod-runner]
+    runs-on: self-hosted
     needs: [buildImage]
 
     steps:
