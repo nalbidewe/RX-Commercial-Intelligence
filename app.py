@@ -57,12 +57,14 @@ def get_secret_value(secretName, client):
 
 client = init_key_vault_client(en_tenant_id, en_client_id, en_client_secret)
 
-azure_chat_model_name_mini = get_secret_value("AZURE-CHAT-MODEL-NAME-PROD-MINI-GLOBAL", client)
-azure_chat_model_name = get_secret_value("AZURE-CHAT-MODEL-NAME-PROD", client)
-azure_embeddings_model_name = get_secret_value("AZURE-EMBEDDINGS-MODEL-NAME-PROD", client)
-openai_api_version = get_secret_value("OPENAI-API-VERSION", client)
-azure_openai_endpoint= get_secret_value("AZURE-OPENAI-ENDPOINT-PROD", client)
-azure_openai_api_key = get_secret_value("AZURE-OPENAI-API-KEY-PROD", client)
+azure_chat_model_name_mini = get_secret_value("azure-openai-4o-mini-global", client)
+azure_chat_model_name = get_secret_value("azure-openai-4o-global", client)
+azure_embeddings_model_name = get_secret_value("azure-openai-embedding-small", client)
+openai_api_version = get_secret_value("azure-openai-api-version", client)
+azure_openai_endpoint= get_secret_value("azure-openai-endpoint", client)
+azure_openai_api_key = get_secret_value("azure-openai-api-key", client)
+
+# MongoDB connection
 server = get_secret_value("mongodb-url", client)
 username = get_secret_value("mongodb-user", client)
 password = get_secret_value("mongodb-pass", client)
