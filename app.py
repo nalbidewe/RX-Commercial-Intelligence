@@ -15,7 +15,7 @@ import tiktoken
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 
-import PyPDF2  # For PDF processing
+from pypdf import PdfReader
 import docx    # For DOCX processing
 
 from azure.keyvault.secrets import SecretClient
@@ -90,7 +90,7 @@ def read_pdf(file) -> str:
     Returns:
         str: The extracted text.
     """
-    reader = PyPDF2.PdfReader(file)
+    reader = PdfReader(file)
     text = ""
     for page_num in range(len(reader.pages)):
         text += reader.pages[page_num].extract_text()

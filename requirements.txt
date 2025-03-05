@@ -10,6 +10,7 @@ azure-keyvault-secrets
 azure-storage-blob
 cryptography
 python-docx
+pypdf
 psycopg
 psycopg[binary]
 asyncpg
