@@ -23,7 +23,7 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+          creds: ${{ secrets.Azure_Credential_P }}
         
       # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
@@ -44,7 +44,7 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_PROD }}
+          creds: ${{ secrets.Azure_Credential_P }}
 
       - name: Deploy to Azure Web App
         run: |
