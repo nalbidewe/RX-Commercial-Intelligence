@@ -19,16 +19,21 @@ jobs:
     runs-on: [self-hosted, prod-runner]
 
     steps:
-      # Logs in with your Azure credentials
+      - name: Check out repo
+        uses: actions/checkout@v4
+
       - name: Azure login
         uses: azure/login@v2
         with:
           creds: ${{ secrets.Azure_Credential_P }}
         
-      # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
         run: |
-          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{env.CONTAINER_NAME}}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.RESOURCE_GROUP }} --agent-pool prodneuacrpool .
+          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{env.CONTAINER_NAME}}:${{ github.sha }} \
+                       --registry ${{ env.AZURE_CONTAINER_REGISTRY }} \
+                       -g ${{ env.RESOURCE_GROUP }} \
+                       --agent-pool prodneuacrpool \
+                       .
 
   deploy:
     permissions:
