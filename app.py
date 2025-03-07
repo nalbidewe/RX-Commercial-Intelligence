@@ -151,7 +151,7 @@ def rx_content_creator(sys_msg: str = NEW_SYS_PROMPT_TWO):
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name_mini, temperature=1, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
