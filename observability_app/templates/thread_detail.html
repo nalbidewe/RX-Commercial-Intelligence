@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Thread Detail</h1>
+<p><strong>ID:</strong> {{ thread.id }}</p>
+<p><strong>Name:</strong> {{ thread.name or 'N/A' }}</p>
+<p><strong>Created At:</strong> {{ thread.createdAt }}</p>
+
+<h2>Steps</h2>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Start Time</th>
+      <th>End Time</th>
+      <th>Input</th>
+      <th>Output</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+      <!-- Primary row: the step itself -->
+      <tr>
+        <td>{{ step.id }}</td>
+        <td>{{ step.name or 'N/A' }}</td>
+        <td>{{ step.type }}</td>
+        <td>{{ step.startTime }}</td>
+        <td>{{ step.endTime }}</td>
+        <td>{{ step.input }}</td>
+        <td>{{ step.output }}</td>
+      </tr>
+
+      <!-- Secondary row: feedback for this step, if any -->
+      {% if step.feedbacks %}
+      <tr class="table-light">
+        <td colspan="7">
+          <strong>Feedback for this step:</strong>
+          <ul class="mt-2">
+            {% for fb in step.feedbacks %}
+              <li>
+                <strong>{{ fb.name }}</strong>: {{ fb.value }}
+                {% if fb.comment %} ({{ fb.comment }}){% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

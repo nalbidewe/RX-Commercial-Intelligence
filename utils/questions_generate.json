@@ -45,6 +45,21 @@
         "abbrev": "content_platform",
         "mandatory": true
     },
+    "**What is the type of content?**": {
+        "type": "options",
+        "value": [
+            "Article",
+            "Blog Post",
+            "Product Description",
+            "Email Campaign",
+            "Social Media Post",
+            "Press Release",
+            "Newsletter",
+            "Other (Enter your own)"
+        ],
+        "abbrev": "content_type",
+        "mandatory": true
+    },
     "**What is your desired content length?**": {
         "type": "options",
         "value": [

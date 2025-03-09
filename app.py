@@ -25,7 +25,7 @@ import urllib.parse
 from pymongo import MongoClient
 
 # Import your system prompt
-from utils.prompt_generate import SYSTEM_PROMPT_GENERATE, USER_INPUT, USER_SELECTION_MSG, NEW_SYS_PROMPT, NEW_SYS_PROMPT_TWO
+from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
@@ -144,7 +144,7 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
 
 
 @cl.cache
-def rx_content_creator(sys_msg: str = NEW_SYS_PROMPT_TWO):
+def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", sys_msg),
@@ -152,6 +152,20 @@ def rx_content_creator(sys_msg: str = NEW_SYS_PROMPT_TWO):
         ("user", "{input}")
     ])
     llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+    return chain
+
+@cl.cache
+def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
+
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, streaming=True, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -176,16 +190,21 @@ def auth_callback(username: str, password: str):
 async def chat_profile():
     return [
         cl.ChatProfile(
-            name="RX Content Creator",
-            markdown_description="The underlying LLM model is **GPT-3.5**.",
+            name="Content Creation",
+            markdown_description="Generate content for Riyadh Air.",
             #icon="https://picsum.photos/200",
+        ),
+        cl.ChatProfile(
+            name="Content Refinement",
+            markdown_description="Refine existing content for Riyadh Air.",
+            #icon="https://picsum.photos/200",  # Uncomment and provide icon URL if needed
         )
     ]
 
 @cl.on_chat_start
 async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
-    if chat_profile == "RX Content Creator":
+    if chat_profile == "Content Creation":
         questions = load_questions("utils/questions_generate.json")
         rx_content_create = rx_content_creator()
         cl.user_session.set("rx_content_creator", rx_content_create)
@@ -228,22 +247,13 @@ async def on_chat_start():
             user_selections = "\n".join(USER_SELECTION_MSG["selections"])
             
         
-            # Use string formatting with the responses collected
-            filled_prompt = prompt_template.format(
-                content_purpose=user_responses.get("content_purpose", "N/A"),
-                target_audience=user_responses.get("target_audience", "N/A"),
-                key_message=user_responses.get("key_message", "N/A"),
-                content_platform=user_responses.get("content_platform", "N/A"),
-                content_length=user_responses.get("content_length", "N/A")
-            )
-            filled_user_selections = user_selections.format(
-                content_purpose=user_responses.get("content_purpose", "N/A"),
-                target_audience=user_responses.get("target_audience", "N/A"),
-                key_message=user_responses.get("key_message", "N/A"),
-                content_platform=user_responses.get("content_platform", "N/A"),
-                content_length=user_responses.get("content_length", "N/A")
-            )
-            #await cl.Message(content=filled_prompt).send()
+            class DefaultDict(dict):
+                def __missing__(self, key):
+                    return "N/A"
+
+            filled_prompt = prompt_template.format_map(DefaultDict(user_responses))
+            filled_user_selections = user_selections.format_map(DefaultDict(user_responses))
+        
             cl.user_session.set("filled_prompt", filled_prompt)
             res = await cl.AskActionMessage(
                 content=filled_user_selections,
@@ -269,7 +279,8 @@ async def on_chat_start():
         if res and res.get("payload").get("value") == "Yes":
             query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
             config = {"configurable": {"thread_id": "rx_contentgen"}}
-            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=str(uuid.uuid4()))
+            msg_id = str(uuid.uuid4())
+            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=msg_id)
             for attempt in range(max_retries):
                 try:
                     full_msg = ""
@@ -291,13 +302,19 @@ async def on_chat_start():
         else:
             await cl.Message(content="Please start a new chat to generate content.").send()
             return
+    
+    elif chat_profile == "Content Refinement":
+        rx_copywrite = rx_copywriter()
+        cl.user_session.set("rx_copywriter", rx_copywrite)
+        chat_history_copywriter = []
+        cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
 
 @cl.on_message
 async def on_message(message: cl.Message):
     chat_profile = cl.user_session.get("chat_profile")
     user_msg = message.content
     
-    if chat_profile == "RX Content Creator":
+    if chat_profile == "Content Creation":
         rx_content_create = cl.user_session.get("rx_content_creator")
         chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
         if len(chat_history_content_creator) == 0:
@@ -321,6 +338,53 @@ async def on_message(message: cl.Message):
                 chat_history_content_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
                 await msg_contentgen.send()
+                return
+
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    
+    elif chat_profile == "Content Refinement":
+
+        rx_copywriter = cl.user_session.get("rx_copywriter")
+        chat_history_copywriter = cl.user_session.get("chat_history_copywriter")
+        config = {"configurable": {"thread_id": "rx_copywriter"}}
+        msg_copywriter = cl.Message(content="", author="Riyadh Air AI Web Research", id=str(uuid.uuid4()))
+        max_retries = 3
+        if message.elements:
+            print('element detected')
+            if message.elements[0].name.endswith('.docx'):
+            #if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in message.elements[0].mime:
+                file_element = message.elements[0]
+                path = file_element.path
+                doc_content = read_docx(path)
+                user_msg = (
+                        f"{user_msg}:\n\nThe following is content from an attached word document, use it to "
+                        f"supplement your answer:\n\n{doc_content}"
+                    )
+            elif message.elements[0].name.endswith('.pdf'):
+                file_element = message.elements[0]
+                path = file_element.path
+                doc_content = read_pdf(path)
+                user_msg = (
+                        f"{user_msg}:\n\nThe following is content from an attached PDF document, use it to "
+                        f"supplement your answer:\n\n{doc_content}"
+                    )
+        print(user_msg)
+        query = {"chat_history": chat_history_copywriter, "input": user_msg}
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_copywriter.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_copywriter.stream_token(chunk)
+                    full_msg += chunk
+
+                chat_history_copywriter.append(HumanMessage(content=user_msg))
+                chat_history_copywriter.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
+                await msg_copywriter.send()
                 return
 
             except Exception as e:
