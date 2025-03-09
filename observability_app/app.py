@@ -1,3 +1,4 @@
+import markdown2
 from flask import Flask, render_template, jsonify
 from models import db, User, Thread, Step, Element, Feedback
 import os
@@ -24,16 +25,36 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-# Dashboard: shows overall counts and a chart for run durations.
+@app.template_filter('markdown')
+def markdown_filter(text):
+    if not text:
+        return ""
+    # Convert Markdown to HTML
+    return markdown2.markdown(text)
+
 @app.route('/')
-def dashboard():
+def home():
     thread_count = Thread.query.count()
     user_count = User.query.count()
     run_count = Step.query.filter_by(type='run').count()
-    return render_template('dashboard.html',
-                           thread_count=thread_count,
-                           user_count=user_count,
-                           run_count=run_count)
+    return render_template(
+        'home.html',
+        thread_count=thread_count,
+        user_count=user_count,
+        run_count=run_count
+    )
+
+
+# # Dashboard: shows overall counts and a chart for run durations.
+# @app.route('/')
+# def dashboard():
+#     thread_count = Thread.query.count()
+#     user_count = User.query.count()
+#     run_count = Step.query.filter_by(type='run').count()
+#     return render_template('dashboard.html',
+#                            thread_count=thread_count,
+#                            user_count=user_count,
+#                            run_count=run_count)
 
 # List all threads.
 @app.route('/threads')

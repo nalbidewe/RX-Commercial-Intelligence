@@ -14,7 +14,7 @@ body {
 
 /* Container max-width for a spacious layout */
 .container {
-  max-width: 1200px;
+  max-width: 1500px;
 }
 
 /* Card enhancements for dashboards and data display */
@@ -22,6 +22,7 @@ body {
   border: none;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
 }
 
 /* Table styling for a clean data presentation */
