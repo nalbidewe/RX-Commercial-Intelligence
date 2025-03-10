@@ -151,7 +151,7 @@ def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -165,7 +165,7 @@ def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, streaming=True, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -187,17 +187,26 @@ def auth_callback(username: str, password: str):
     return None
     
 @cl.set_chat_profiles
-async def chat_profile():
+async def chat_profile(current_user: cl.User):
+    user_role = current_user.metadata.get("role")
+    print(f"User role: {user_role}")
     return [
         cl.ChatProfile(
             name="Content Creation",
             markdown_description="Generate content for Riyadh Air.",
-            #icon="https://picsum.photos/200",
+            icon="/public/create_2.svg",
         ),
         cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
-            #icon="https://picsum.photos/200",  # Uncomment and provide icon URL if needed
+            icon="/public/refine_3.svg",
+            starters=[
+                cl.Starter(
+                    label="Usage Instructions",
+                    message="How can I use this tool?",
+                    icon="/public/help.svg",
+                ),
+            ]
         )
     ]
 
@@ -321,8 +330,8 @@ async def on_message(message: cl.Message):
             await cl.Message(content="Please start a new chat to generate content.").send()
             return
         query = {"chat_history": chat_history_content_creator, "input": user_msg}
-        config = {"configurable": {"thread_id": "rx_contentgen"}}
-        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=str(uuid.uuid4()))
+        config = {"configurable": {"thread_id": message.thread_id}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -347,8 +356,8 @@ async def on_message(message: cl.Message):
 
         rx_copywriter = cl.user_session.get("rx_copywriter")
         chat_history_copywriter = cl.user_session.get("chat_history_copywriter")
-        config = {"configurable": {"thread_id": "rx_copywriter"}}
-        msg_copywriter = cl.Message(content="", author="Riyadh Air AI Web Research", id=str(uuid.uuid4()))
+        config = {"configurable": {"thread_id": message.thread_id}}
+        msg_copywriter = cl.Message(content="", author="Riyadh Air AI Web Research")
         max_retries = 3
         if message.elements:
             print('element detected')
