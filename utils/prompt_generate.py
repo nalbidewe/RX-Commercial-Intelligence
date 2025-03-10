@@ -4,8 +4,8 @@ USER_INPUT = {
         "1. **Content Purpose**: {content_purpose}",
         "2. **Target Audience**: {target_audience}",
         "3. **Key Message**: {key_message}",
-        "4. **Content Platform**: {content_platform}",
-        "5. **Content Type**: {content_type}",
+        "4. **Content Type**: {content_type}",
+        "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
     ]
 }
@@ -15,8 +15,8 @@ USER_SELECTION_MSG = {
         "1. **Content Purpose**: {content_purpose}",
         "2. **Target Audience**: {target_audience}",
         "3. **Key Message**: {key_message}",
-        "4. **Content Platform**: {content_platform}",
-        "5. **Content Type**: {content_type}",
+        "4. **Content Type**: {content_type}",
+        "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
         "Would you like to proceed with this selection?"
                 ]

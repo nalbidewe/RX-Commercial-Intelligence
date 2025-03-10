@@ -1,5 +1,6 @@
 import chainlit as cl
 import os
+import re
 import json
 import logging
 import uuid
@@ -79,8 +80,9 @@ collection = db["Users"]
 
 # Load JSON from file
 def load_questions(file_path):
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         return json.load(file)
+
 
 def read_pdf(file) -> str:
     """
@@ -233,35 +235,42 @@ async def on_chat_start():
                 res = await cl.AskActionMessage(
                     content=question,
                     actions=actions,
-                    timeout=300,
+                    timeout=120,
                     raise_on_timeout=True
                 ).send()
 
                 if res and res.get("payload"):
-                    if res["payload"].get("value") == "Other (Enter your own)":
+                    selected_value = res["payload"].get("value")
+                    # If the user selects "Other (Enter your own)", ask for input
+                    if selected_value == "Other (Enter your own)":
                         res = await cl.AskUserMessage(
                             content=f"{question}\nPlease type your answer in the chat box below.",
-                            timeout=300,
+                            timeout=120,
                             raise_on_timeout=True
                         ).send()
                         selected_value = res["output"]
-                    else:
-                        selected_value = res["payload"].get("value")
+
+                    # If the user selects "Skip", do not store a response
+                    if selected_value == "Skip⏩":
+                        continue
+
                     abbrev = details.get("abbrev")
                     user_responses[abbrev] = selected_value
 
-            # Send all collected responses to the user or save them
-            #await cl.Message(content=f"Responses collected: {user_responses}").send()
-            prompt_template = "\n".join(USER_INPUT["content_gen_prompt"])
-            user_selections = "\n".join(USER_SELECTION_MSG["selections"])
-            
-        
-            class DefaultDict(dict):
-                def __missing__(self, key):
-                    return "N/A"
+            # Function to filter and fill template lines only if all placeholders exist
+            def fill_template(template_lines, responses):
+                filled_lines = []
+                for line in template_lines:
+                    # Find placeholders in the line
+                    placeholders = re.findall(r"\{(.*?)\}", line)
+                    # Only include the line if every placeholder is present in responses
+                    if all(placeholder in responses for placeholder in placeholders):
+                        filled_lines.append(line.format(**responses))
+                return "\n".join(filled_lines)
 
-            filled_prompt = prompt_template.format_map(DefaultDict(user_responses))
-            filled_user_selections = user_selections.format_map(DefaultDict(user_responses))
+            # Build the final prompt template and user selection messages
+            filled_prompt = fill_template(USER_INPUT["content_gen_prompt"], user_responses)
+            filled_user_selections = fill_template(USER_SELECTION_MSG["selections"], user_responses)
         
             cl.user_session.set("filled_prompt", filled_prompt)
             res = await cl.AskActionMessage(
@@ -288,8 +297,7 @@ async def on_chat_start():
         if res and res.get("payload").get("value") == "Yes":
             query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
             config = {"configurable": {"thread_id": "rx_contentgen"}}
-            msg_id = str(uuid.uuid4())
-            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=msg_id)
+            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
             for attempt in range(max_retries):
                 try:
                     full_msg = ""
