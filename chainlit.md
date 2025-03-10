@@ -13,4 +13,5 @@ This document tracks the version history of the AI Content Gen App
     - Added the tools selection drop box
     - Introduced refinement tool to help tailor existing content to Riyadh Air's tone of voice and lexicon.
     - Added content type as part of the questions of the guided flow.
+    - Added a skip option in the selections to remove redundancy
     - Switched font family to Google's Roboto
