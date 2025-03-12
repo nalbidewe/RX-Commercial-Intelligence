@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Users</h1>
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Identifier</th>
+      <th>Created At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td><a href="/user/{{ user.id }}">{{ user.id }}</a></td>
+      <td>{{ user.identifier }}</td>
+      <td>{{ user.createdAt }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

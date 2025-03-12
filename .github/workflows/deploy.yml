@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "test" ]
   workflow_dispatch:
 
 env:
   AZURE_CONTAINER_REGISTRY: "registryneuaks01"
-  CONTAINER_NAME: "rx-content-dev"
+  CONTAINER_NAME: "rx-content-test"
   RESOURCE_GROUP: "rg-neu-n-dataapps-01"
-  WEB_APP_NAME: "rx-ai-content-gen-dev"
+  WEB_APP_NAME: "rx-ai-content-gen-test"
 
 jobs:
   buildImage:

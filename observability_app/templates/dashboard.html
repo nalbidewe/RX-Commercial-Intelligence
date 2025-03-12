@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="row">
+  <div class="col-md-4">
+    <div class="card text-white bg-primary mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Threads</h5>
+        <p class="card-text">{{ thread_count }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-success mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Users</h5>
+        <p class="card-text">{{ user_count }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-white bg-warning mb-3">
+      <div class="card-body">
+        <h5 class="card-title">Runs</h5>
+        <p class="card-text">{{ run_count }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+<h2>Recent Runs</h2>
+<canvas id="runsChart"></canvas>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Fetch runs and plot durations (in seconds)
+fetch('/api/runs')
+  .then(response => response.json())
+  .then(data => {
+      const labels = data.map(run => run.name);
+      const durations = data.map(run => {
+          const start = new Date(run.startTime);
+          const end = new Date(run.endTime);
+          return (end - start) / 1000;
+      });
+      const ctx = document.getElementById('runsChart').getContext('2d');
+      new Chart(ctx, {
+          type: 'bar',
+          data: {
+              labels: labels,
+              datasets: [{
+                  label: 'Run Duration (s)',
+                  data: durations,
+                  backgroundColor: 'rgba(54, 162, 235, 0.6)'
+              }]
+          },
+          options: {
+              scales: {
+                  y: {
+                      beginAtZero: true
+                  }
+              }
+          }
+      });
+  });
+</script>
+{% endblock %}

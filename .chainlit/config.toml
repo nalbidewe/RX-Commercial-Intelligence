@@ -1,6 +1,6 @@
 [project]
 # Whether to enable telemetry (default: true). No personal data is collected.
-enable_telemetry = true
+enable_telemetry = false
 
 
 # List of environment variables to be provided by each user to use the app.
@@ -23,7 +23,7 @@ allow_origins = ["*"]
 unsafe_allow_html = false
 
 # Process and display mathematical expressions. This can clash with "$" characters in messages.
-latex = true
+latex = false
 
 # Automatically tag threads with the current chat profile (if a chat profile is used)
 auto_tag_thread = true
@@ -33,7 +33,7 @@ edit_message = false
 
 # Authorize users to spontaneously upload files with messages
 [features.spontaneous_file_upload]
-    enabled = false
+    enabled = true
     # Define accepted file types using MIME types
     # Examples:
     # 1. For specific file types:
@@ -44,8 +44,8 @@ edit_message = false
     #    accept = { "application/octet-stream" = [".xyz", ".pdb"] }
     # Note: Using "*/*" is not recommended as it may cause browser warnings
     accept = ["*/*"]
-    max_files = 20
-    max_size_mb = 500
+    max_files = 5
+    max_size_mb = 50
 
 [features.audio]
     # Sample rate of the audio
@@ -88,4 +88,4 @@ custom_css = "/public/styling.css"
 #     url = "https://github.com/Chainlit/chainlit/issues"
 
 [meta]
-generated_by = "2.2.0"
+generated_by = "2.3.0"

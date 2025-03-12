@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>User Detail</h1>
+<p><strong>ID:</strong> {{ user.id }}</p>
+<p><strong>Identifier:</strong> {{ user.identifier }}</p>
+<p><strong>Created At:</strong> {{ user.createdAt }}</p>
+
+<h2>Threads</h2>
+{% if user.threads %}
+  <ul>
+    {% for thread in user.threads %}
+      <li><a href="/thread/{{ thread.id }}">{{ thread.name or thread.id }}</a></li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p>No threads available.</p>
+{% endif %}
+{% endblock %}

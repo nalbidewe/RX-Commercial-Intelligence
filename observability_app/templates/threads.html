@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Threads</h1>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Created At</th>
+      <th>User</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for thread in threads %}
+    <tr>
+      <td><a href="/thread/{{ thread.id }}">{{ thread.id }}</a></td>
+      <td>{{ thread.name or 'N/A' }}</td>
+      <td>{{ thread.createdAt }}</td>
+      <td>{{ thread.user.identifier if thread.user else 'N/A' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
