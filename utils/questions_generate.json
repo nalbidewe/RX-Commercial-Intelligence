@@ -17,7 +17,8 @@
             "General Public (Guests)",
             "Investor Relations",
             "Media",
-            "Other (Enter your own)"
+            "Other (Enter your own)",
+            "Skip⏩"
         ],
         "abbrev": "target_audience",
         "mandatory": true
@@ -31,18 +32,10 @@
             "Highlights of fleet capabilities and amenities",
             "Job opportunities and employee benefits",
             "Exclusive travel experiences and deals",
-            "Other (Enter your own)"
+            "Other (Enter your own)",
+            "Skip⏩"
         ],
         "abbrev": "key_message",
-        "mandatory": true
-    },
-    "**What platform is this content intended for?**": {
-        "type": "options",
-        "value": [
-            "Website (moderately detailed and to the point)",
-            "App (summarized and concise)"
-        ],
-        "abbrev": "content_platform",
         "mandatory": true
     },
     "**What is the type of content?**": {
@@ -55,9 +48,20 @@
             "Social Media Post",
             "Press Release",
             "Newsletter",
-            "Other (Enter your own)"
+            "Other (Enter your own)",
+            "Skip⏩"
         ],
         "abbrev": "content_type",
+        "mandatory": true
+    },
+    "**What platform is this content intended for?**": {
+        "type": "options",
+        "value": [
+            "Website (moderately detailed and to the point)",
+            "App (summarized and concise)",
+            "Skip⏩"
+        ],
+        "abbrev": "content_platform",
         "mandatory": true
     },
     "**What is your desired content length?**": {
@@ -67,7 +71,8 @@
             "Short",
             "Medium",
             "Long",
-            "Other (Enter your own)"
+            "Other (Enter your own)",
+            "Skip⏩"
         ],
         "abbrev": "content_length",
         "mandatory": true
