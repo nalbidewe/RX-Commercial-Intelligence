@@ -27,7 +27,7 @@ from pymongo import MongoClient
 
 # Import your system prompt
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
-
+from utils.prompt_generate_lifecyle import USER_INPUT_LIFECYCLE, USER_SELECTION_MSG_LIFECYCLE, SYSTEM_LIFECYCLE_PROMPT
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
 
@@ -172,6 +172,20 @@ def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache
+def rx_lifecycle_creator(sys_msg: str = SYSTEM_LIFECYCLE_PROMPT): #TODO:
+
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, streaming=True, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """Authenticate user based on credentials stored in MongoDB."""
@@ -210,8 +224,65 @@ async def chat_profile(current_user: cl.User):
                 ),
             ]
         )
+        ,
+         cl.ChatProfile(
+            name="Lifecycle Content Creation",
+            markdown_description="Generate content for Riyadh Air.",
+            #icon="https://picsum.photos/200",  # Uncomment and provide icon URL if needed
+        )
     ]
 
+async def process_sub_questions(sub_questions_list):
+    responses = {}
+    for sub_question in sub_questions_list:
+        print(sub_question['question'])
+        print(sub_question["value"])
+        actions = [
+            cl.Action(name=value, payload={"value": value}, label=value)
+            for value in sub_question["value"]
+        ]
+        res = await cl.AskActionMessage(
+            content=sub_question["question"],
+            actions=actions,
+            timeout=300,
+            raise_on_timeout=True
+        ).send()
+        
+        if res and res.get("payload"):
+            answer = res["payload"].get("value")
+            if answer in ["Other (Enter your own)", "Yes, add additional info"]:
+                res = await cl.AskUserMessage(
+                    content=f"{sub_question['question']}\nPlease type your answer in the chat box below:",
+                    timeout=300,
+                    raise_on_timeout=True
+                ).send()
+                answer = res["output"]
+            
+            # Use a key for this sub-question
+            key = sub_question.get("abbrev")
+            responses[key] = answer
+            
+            # If this sub_question has further nested sub_questions, process them recursively.
+            if "sub_questions" in sub_question:
+                print('sub sub question')
+                print(sub_question["sub_questions"], type(sub_question["sub_questions"]))
+
+                nested_responses = await process_sub_questions(sub_question["sub_questions"][answer])
+                responses.update(nested_responses)
+            else:
+                continue
+    return responses
+
+def adjust_template(template_lines, responses):
+                filled_lines = []
+                for line in template_lines:
+                    # Find placeholders in the line
+                    placeholders = re.findall(r"\{(.*?)\}", line)
+                    # Only include the line if every placeholder is present in responses
+                    if all(placeholder in responses for placeholder in placeholders):
+                        filled_lines.append(line.format(**responses))
+                return "\n".join(filled_lines)
+       
 @cl.on_chat_start
 async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
@@ -242,7 +313,7 @@ async def on_chat_start():
                 if res and res.get("payload"):
                     selected_value = res["payload"].get("value")
                     # If the user selects "Other (Enter your own)", ask for input
-                    if selected_value == "Other (Enter your own)":
+                    if selected_value in ["Other (Enter your own)", "Yes, add additional info"]:
                         res = await cl.AskUserMessage(
                             content=f"{question}\nPlease type your answer in the chat box below.",
                             timeout=120,
@@ -325,7 +396,120 @@ async def on_chat_start():
         cl.user_session.set("rx_copywriter", rx_copywrite)
         chat_history_copywriter = []
         cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
+    
+    elif chat_profile == "Lifecycle Content Creation":
+        questions = load_questions("utils/question_generate_lifecyle.json")
+        rx_lifecycle_create = rx_lifecycle_creator()
+        cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
+        chat_history_lifecycle_creator = []
+        cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
+        try:
+            user_responses = {}  # To store all user responses
+            for details in questions['questions']:
+                print(details)
+                
+                actions = [
+                    cl.Action(
+                        name=value,
+                        payload={"value": value},
+                        label=value
+                    ) for value in details['value']
+                ]
+                print(actions)
+
+                res = await cl.AskActionMessage(
+                    content=details["question"],
+                    actions=actions,
+                    timeout=300,
+                    raise_on_timeout=True
+                ).send()
+                
+                if res and res.get("payload"):
+                    answer = res["payload"].get("value")
+                    if answer in ["Other (Enter your own)", "Yes, add additional info"]:
+                        res = await cl.AskUserMessage(
+                            content=f'{details["question"]}\nPlease type your answer in the chat box below.',
+                            timeout=300,
+                            raise_on_timeout=True
+                        ).send()
+                        selected_value = res["output"]
+                    else:
+                        selected_value = res["payload"].get("value")
+
+                    # If the user selects "Skip", do not store a response
+                    if selected_value == "Skip⏩":
+                        continue
+
+                    abbrev = details.get("abbrev")
+                    user_responses[abbrev] = selected_value
+                
+                if "sub_questions" in details:
+                    sub_resp = await process_sub_questions(details["sub_questions"].get(selected_value, []))
+                    user_responses.update(sub_resp)
+
+
+            # Send all collected responses to the user or save them
+            prompt_template = "\n".join(USER_INPUT_LIFECYCLE["content_gen_prompt"])
+            user_selections = "\n".join(USER_SELECTION_MSG_LIFECYCLE["selections"])
+
+            class DefaultDict(dict):
+                def __missing__(self, key):
+                    return "N/A"
+                
+            filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
+            filled_user_selections = adjust_template(USER_SELECTION_MSG_LIFECYCLE["selections"], user_responses)
+        
+            cl.user_session.set("filled_prompt", filled_prompt)
+            res = await cl.AskActionMessage(
+                content=filled_user_selections,
+                actions=[
+                    cl.Action(
+                        name="Yes",
+                        payload={"value": "Yes"},
+                        label="✅ Yes"
+                    ),
+                    cl.Action(
+                        name="No",
+                        payload={"value": "No"},
+                        label="❌ No"
+                    )
+                ]
+            ).send()
+        except Exception as e:
+            logging.error(f"Timed out, responses not entered in time. Error: {e}...")
+            await cl.Message(content="Timed out, responses not entered in time. Please start a new chat.").send()
+            return
+
+        max_retries = 3
+        if res and res.get("payload").get("value") == "Yes":
+            query = {"chat_history": chat_history_lifecycle_creator, "input": filled_prompt}
+            config = {"configurable": {"thread_id": "rx_contentgen"}}
+            msg_id = str(uuid.uuid4())
+            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=msg_id)
+            for attempt in range(max_retries):
+                try:
+                    full_msg = ""
+                    async for chunk in rx_lifecycle_create.astream(
+                        query,
+                        config=config
+                    ):
+                        await msg_contentgen.stream_token(chunk)
+                        full_msg += chunk
+
+                    chat_history_lifecycle_creator.append(HumanMessage(content=filled_prompt))
+                    chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                    await msg_contentgen.send()
+                    return
+
+                except Exception as e:
+                    logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+        else:
+            await cl.Message(content="Please start a new chat to generate content.").send()
+            return
+        
+       
 @cl.on_message
 async def on_message(message: cl.Message):
     chat_profile = cl.user_session.get("chat_profile")
@@ -406,3 +590,38 @@ async def on_message(message: cl.Message):
 
             except Exception as e:
                 logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
+    # rx_lifecycle_create = rx_lifecycle_creator()
+    # cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
+    # chat_history_lifecycle_creator = []
+    # cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+    
+    elif chat_profile == "Lifecycle Content Creation":
+        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_create")
+        chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
+        if len(chat_history_lifecycle_creator) == 0:
+            await cl.Message(content="Please start a new chat to generate content.").send()
+            return
+        query = {"chat_history": chat_history_lifecycle_creator, "input": user_msg}
+        config = {"configurable": {"thread_id": message.thread_id}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_lifecycle_create.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+
+                chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
+                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                await msg_contentgen.send()
+                return
+
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    
