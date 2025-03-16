@@ -1,3 +1,4 @@
+
 {
   "questions": [
     {
@@ -30,13 +31,16 @@
                   "question": "What is the main objective of this transactional email?",
                   "type": "options",
                   "value": [
-                    "Confirm booking/order details",
-                    "Provide travel itinerary/order summary",
-                    "Notify order changes",
-                    "Notify order cancellations",
-                    "Process refunds",
-                    "Process update payment status",
-                    "Send OTP or payment instructions",
+                    "Booking Confirmation & Travel Summary",
+                    "Flight Itinerary & Booking Details",
+                    "Flight Change Confirmation",
+                    "Service Update Confirmation",
+                    "Booking Cancellation & Refund Details",
+                    "Payment Reminder",
+                    "One-Time Password (OTP) for Secure Access",
+                    "Document Submission Request",
+                    "Feedback & Survey Invitation",
+                    "Tax Invoice & Payment Receipt",
                     "Other (Enter your own)",
                     "Skip⏩"
                   ],
@@ -50,7 +54,8 @@
                   "type": "options",
                   "value": [
                     "Announce promotions or special offers",
-                    "Share brand news or travel tips",
+                    "Share brand news",
+                    "Share travel tips",
                     "Other (Enter your own)",
                     "Skip⏩"
                   ],
@@ -167,3 +172,5 @@
     }
   ]
 }
+
+

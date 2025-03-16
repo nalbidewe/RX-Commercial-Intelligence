@@ -27,7 +27,14 @@ from pymongo import MongoClient
 
 # Import your system prompt
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
-from utils.prompt_generate_lifecyle import USER_INPUT_LIFECYCLE, USER_SELECTION_MSG_LIFECYCLE, SYSTEM_LIFECYCLE_PROMPT
+from utils.prompt_generate_lifecyle import (
+    USER_INPUT_LIFECYCLE, 
+    USER_SELECTION_MSG_LIFECYCLE, 
+    SYSTEM_LIFECYCLE_PROMPT, 
+    EMAIL_TEMPLATE
+)
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
 
@@ -173,11 +180,11 @@ def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
     return chain
 
 @cl.cache
-def rx_lifecycle_creator(sys_msg: str = SYSTEM_LIFECYCLE_PROMPT): #TODO:
+def rx_lifecycle_creator():
 
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_msg),
+        ("system", "{sys_msg}"),
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
@@ -448,11 +455,6 @@ async def on_chat_start():
                     sub_resp = await process_sub_questions(details["sub_questions"].get(selected_value, []))
                     user_responses.update(sub_resp)
 
-
-            # Send all collected responses to the user or save them
-            prompt_template = "\n".join(USER_INPUT_LIFECYCLE["content_gen_prompt"])
-            user_selections = "\n".join(USER_SELECTION_MSG_LIFECYCLE["selections"])
-
             class DefaultDict(dict):
                 def __missing__(self, key):
                     return "N/A"
@@ -461,6 +463,16 @@ async def on_chat_start():
             filled_user_selections = adjust_template(USER_SELECTION_MSG_LIFECYCLE["selections"], user_responses)
         
             cl.user_session.set("filled_prompt", filled_prompt)
+
+            email_template = ""
+            email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""))
+
+            prompt_email_template = ""
+            if len(email_template) > 0:
+                prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
+                prompt_email_template += "\n\n" + email_template
+
+            print('prompt_email_template', prompt_email_template)
             res = await cl.AskActionMessage(
                 content=filled_user_selections,
                 actions=[
@@ -483,7 +495,9 @@ async def on_chat_start():
 
         max_retries = 3
         if res and res.get("payload").get("value") == "Yes":
-            query = {"chat_history": chat_history_lifecycle_creator, "input": filled_prompt}
+            query = {"chat_history": chat_history_lifecycle_creator,
+                     "sys_msg": SYSTEM_LIFECYCLE_PROMPT + prompt_email_template,
+                     "input": filled_prompt}
             config = {"configurable": {"thread_id": "rx_contentgen"}}
             msg_id = str(uuid.uuid4())
             msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=msg_id)
