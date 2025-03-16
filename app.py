@@ -235,7 +235,7 @@ async def chat_profile(current_user: cl.User):
          cl.ChatProfile(
             name="Lifecycle Content Creation",
             markdown_description="Generate content for Riyadh Air.",
-            #icon="https://picsum.photos/200",  # Uncomment and provide icon URL if needed
+            icon="/public/email-inbox.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
         )
     ]
 
@@ -464,8 +464,7 @@ async def on_chat_start():
         
             cl.user_session.set("filled_prompt", filled_prompt)
 
-            email_template = ""
-            email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""))
+            email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""),  "")
 
             prompt_email_template = ""
             if len(email_template) > 0:

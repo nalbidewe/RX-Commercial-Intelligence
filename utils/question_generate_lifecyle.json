@@ -106,7 +106,7 @@
             "question": "Select the structure for your push notification:",
             "type": "options",
             "value": [
-              "Include Title (optional) and Message (up to 100 characters)",
+              "Include Title (optional), Message (up to 100 characters), CTA Button/Tag (optional)",
               "Other (Enter your own)",
               "Skip⏩"
             ],
