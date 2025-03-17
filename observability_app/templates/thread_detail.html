@@ -16,6 +16,7 @@
       <th style="width: 180px;">End Time</th>
       <th style="width: 250px;">Input</th>
       <th style="width: 300px;">Output (Markdown)</th>
+      <th style="width: 300px;">Feedback</th>
     </tr>
   </thead>
   <tbody>
@@ -29,22 +30,15 @@
         <td>{{ step.input }}</td>
         <!-- Render Markdown in output -->
         <td>{{ step.output|markdown|safe }}</td>
-      </tr>
-      {% if step.feedbacks %}
-      <tr class="table-light">
-        <td colspan="7">
-          <strong>Feedback for this step:</strong>
-          <ul class="mt-2">
+        <td>
+          {% if step.feedbacks %}
             {% for fb in step.feedbacks %}
-              <li>
-                <strong>{{ fb.name }}</strong>: {{ fb.value }}
-                {% if fb.comment %} ({{ fb.comment }}){% endif %}
-              </li>
+              <strong>{{ fb.name }}</strong>: {{ fb.value }}{% if fb.comment %} ({{ fb.comment }}){% endif %}
+              {% if not loop.last %} | {% endif %}
             {% endfor %}
-          </ul>
+          {% endif %}
         </td>
       </tr>
-      {% endif %}
     {% endfor %}
   </tbody>
 </table>

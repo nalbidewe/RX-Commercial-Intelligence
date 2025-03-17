@@ -1,4 +1,20 @@
 {
+    "**What is the type of content?**": {
+        "type": "options",
+        "value": [
+            "Article",
+            "Blog Post",
+            "Product Description",
+            "Email Campaign",
+            "Social Media Post",
+            "Press Release",
+            "Newsletter",
+            "Other (Enter your own)",
+            "Skip⏩"
+        ],
+        "abbrev": "content_type",
+        "mandatory": true
+    },
     "**What is the purpose of this content?**": {
         "type": "text",
         "value": [
@@ -36,22 +52,6 @@
             "Skip⏩"
         ],
         "abbrev": "key_message",
-        "mandatory": true
-    },
-    "**What is the type of content?**": {
-        "type": "options",
-        "value": [
-            "Article",
-            "Blog Post",
-            "Product Description",
-            "Email Campaign",
-            "Social Media Post",
-            "Press Release",
-            "Newsletter",
-            "Other (Enter your own)",
-            "Skip⏩"
-        ],
-        "abbrev": "content_type",
         "mandatory": true
     },
     "**What platform is this content intended for?**": {

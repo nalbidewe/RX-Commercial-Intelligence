@@ -1,10 +1,10 @@
 USER_INPUT = {
     "content_gen_prompt": [
         "User inputs:",
-        "1. **Content Purpose**: {content_purpose}",
-        "2. **Target Audience**: {target_audience}",
-        "3. **Key Message**: {key_message}",
-        "4. **Content Type**: {content_type}",
+        "1. **Content Type**: {content_type}",
+        "2. **Content Purpose**: {content_purpose}",
+        "3. **Target Audience**: {target_audience}",
+        "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
     ]
@@ -12,10 +12,10 @@ USER_INPUT = {
 USER_SELECTION_MSG = {
     "selections": [
         "You have selected the following:",
-        "1. **Content Purpose**: {content_purpose}",
-        "2. **Target Audience**: {target_audience}",
-        "3. **Key Message**: {key_message}",
-        "4. **Content Type**: {content_type}",
+        "1. **Content Type**: {content_type}",
+        "2. **Content Purpose**: {content_purpose}",
+        "3. **Target Audience**: {target_audience}",
+        "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
         "Would you like to proceed with this selection?"
