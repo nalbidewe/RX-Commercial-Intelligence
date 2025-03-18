@@ -1,0 +1,176 @@
+
+{
+  "questions": [
+    {
+      "question": "What type of content do you need?",
+      "type": "options",
+      "value": [
+        "Email",
+        "Push Notification",
+        "SMS (Text message)",
+        "Other (Enter your own)"
+      ],
+      "abbrev": "content_type",
+      "mandatory": true,
+      "sub_questions": {
+        "Email": [
+          {
+            "question": "Is this email transactional or marketing?",
+            "type": "options",
+            "value": [
+              "Transactional Email (e.g., order confirmation, cancellation, OTP, etc.)",
+              "Marketing Email / Newsletter",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "email_type",
+            "mandatory": true,
+            "sub_questions": {
+              "Transactional Email (e.g., order confirmation, cancellation, OTP, etc.)": [
+                {
+                  "question": "What is the main objective of this transactional email?",
+                  "type": "options",
+                  "value": [
+                    "Booking Confirmation & Travel Summary",
+                    "Flight Itinerary & Booking Details",
+                    "Flight Change Confirmation",
+                    "Service Update Confirmation",
+                    "Booking Cancellation & Refund Details",
+                    "Payment Reminder",
+                    "One-Time Password (OTP) for Secure Access",
+                    "Document Submission Request",
+                    "Feedback & Survey Invitation",
+                    "Tax Invoice & Payment Receipt",
+                    "Other (Enter your own)",
+                    "Skip⏩"
+                  ],
+                  "abbrev": "content_purpose",
+                  "mandatory": true
+                }
+              ],
+              "Marketing Email / Newsletter": [
+                {
+                  "question": "What is the main objective of this marketing email?",
+                  "type": "options",
+                  "value": [
+                    "Announce promotions or special offers",
+                    "Share brand news",
+                    "Share travel tips",
+                    "Other (Enter your own)",
+                    "Skip⏩"
+                  ],
+                  "abbrev": "content_purpose",
+                  "mandatory": true
+                }
+              ]
+            }
+          },
+          {
+            "question": "Select the structure for your email:",
+            "type": "options",
+            "value": [
+              "Include Subject Line, Preview Text, Greeting, Detailed Body, CTA Button, and Footer",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "email_structure",
+            "mandatory": true
+          },
+          {
+            "question": "What layout do you prefer for your email?",
+            "type": "options",
+            "value": [
+              "1-Column (mobile-optimized)",
+              "2-Column (desktop-friendly)",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "email_layout",
+            "mandatory": true
+          }
+        ],
+        "Push Notification": [
+          {
+            "question": "What is the main objective of this push notification?",
+            "type": "options",
+            "value": [
+              "Alert about order status or updates",
+              "Announce promotions or special offers",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "content_purpose",
+            "mandatory": true
+          },
+          {
+            "question": "Select the structure for your push notification:",
+            "type": "options",
+            "value": [
+              "Include Title (optional), Message (up to 100 characters), CTA Button/Tag (optional)",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "push_structure",
+            "mandatory": true
+          }
+        ],
+        "SMS (Text message)": [
+          {
+            "question": "What is the main objective of this SMS?",
+            "type": "options",
+            "value": [
+              "Notify order status or send OTP/payment link",
+              "Announce promotions or special offers",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "content_purpose",
+            "mandatory": true
+          },
+          {
+            "question": "Select the structure for your SMS:",
+            "type": "options",
+            "value": [
+              "Include a single message (max 160 characters)",
+              "Other (Enter your own)",
+              "Skip⏩"
+            ],
+            "abbrev": "sms_structure",
+            "mandatory": true
+          }
+        ],
+        "Other": [
+          {
+            "question": "Please specify the structure for your content:",
+            "type": "text",
+            "abbrev": "other_structure",
+            "mandatory": true
+          }
+        ]
+      }
+    },
+    {
+      "question": "Who is the intended recipient?",
+      "type": "options",
+      "value": [
+        "General Customers",
+        "Corporate Clients",
+        "Investors",
+        "Media/Press",
+        "Other (Enter your own)",
+        "Skip⏩"
+      ],
+      "abbrev": "target_audience",
+      "mandatory": true
+    },
+    {
+      "question": "Do you have any additional instructions or details to include?",
+      "type": "text",
+      "value": ["Yes, add additional info", "Skip⏩"],
+      "abbrev": "additional_instructions",
+      "mandatory": false
+    }
+  ]
+}
+
+
