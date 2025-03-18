@@ -610,12 +610,16 @@ async def on_message(message: cl.Message):
     # cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
     
     elif chat_profile == "Lifecycle Content Creation":
-        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_create")
+        print(user_msg)
+        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
         chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
         if len(chat_history_lifecycle_creator) == 0:
             await cl.Message(content="Please start a new chat to generate content.").send()
             return
-        query = {"chat_history": chat_history_lifecycle_creator, "input": user_msg}
+        query = {"chat_history": chat_history_lifecycle_creator,
+                "sys_msg": SYSTEM_LIFECYCLE_PROMPT,
+                "input": user_msg}
+        # query = {"chat_history": chat_history_lifecycle_creator, "input": user_msg}
         config = {"configurable": {"thread_id": message.thread_id}}
         msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
         max_retries = 3
