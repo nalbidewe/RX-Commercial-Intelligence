@@ -84,13 +84,6 @@ client = MongoClient(CONNECTION_STRING)
 db = client["AIContentGenApp"]
 collection = db["Users"]
 
-
-# Load JSON from file
-def load_questions(file_path):
-    with open(file_path, "r", encoding="utf-8") as file:
-        return json.load(file)
-
-
 def read_pdf(file) -> str:
     """
     Extract text from a PDF file.
@@ -151,6 +144,21 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
         encoding = tiktoken.get_encoding('cl100k_base')
     return len(encoding.encode(text))
 
+def load_questions():
+    # Load questions from the JSON file.
+    with open("utils/questions_generate.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    questions = []
+    for question_text, details in data.items():
+        questions.append({
+            "questionId": details["abbrev"],
+            "question": question_text,
+            "type": details["type"],      # All questions are of type "options" by default.
+            "options": details["value"],
+            "selected": "",
+            "isOther": False              # Extra flag to track if "Other" was selected.
+        })
+    return questions
 
 @cl.cache
 def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
@@ -188,7 +196,7 @@ def rx_lifecycle_creator():
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.7, streaming=True, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -212,17 +220,21 @@ def auth_callback(username: str, password: str):
 @cl.set_chat_profiles
 async def chat_profile(current_user: cl.User):
     user_role = current_user.metadata.get("role")
-    print(f"User role: {user_role}")
     return [
         cl.ChatProfile(
-            name="Content Creation",
-            markdown_description="Generate content for Riyadh Air.",
-            icon="/public/create_2.svg",
+            name="Web & App Content Creation",
+            markdown_description="Generate Web & App content for Riyadh Air.",
+            icon="/public/content.svg",
+        ),
+         cl.ChatProfile(
+            name="Lifecycle Content Creation",
+            markdown_description="Generate Lifecycle content for Riyadh Air.",
+            icon="/public/lifecycle.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
         ),
         cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
-            icon="/public/refine_3.svg",
+            icon="/public/refine.svg",
             starters=[
                 cl.Starter(
                     label="Usage Instructions",
@@ -231,19 +243,11 @@ async def chat_profile(current_user: cl.User):
                 ),
             ]
         )
-        ,
-         cl.ChatProfile(
-            name="Lifecycle Content Creation",
-            markdown_description="Generate content for Riyadh Air.",
-            icon="/public/email-inbox.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
-        )
     ]
 
 async def process_sub_questions(sub_questions_list):
     responses = {}
     for sub_question in sub_questions_list:
-        print(sub_question['question'])
-        print(sub_question["value"])
         actions = [
             cl.Action(name=value, payload={"value": value}, label=value)
             for value in sub_question["value"]
@@ -271,9 +275,6 @@ async def process_sub_questions(sub_questions_list):
             
             # If this sub_question has further nested sub_questions, process them recursively.
             if "sub_questions" in sub_question:
-                print('sub sub question')
-                print(sub_question["sub_questions"], type(sub_question["sub_questions"]))
-
                 nested_responses = await process_sub_questions(sub_question["sub_questions"][answer])
                 responses.update(nested_responses)
             else:
@@ -281,122 +282,33 @@ async def process_sub_questions(sub_questions_list):
     return responses
 
 def adjust_template(template_lines, responses):
-                filled_lines = []
-                for line in template_lines:
-                    # Find placeholders in the line
-                    placeholders = re.findall(r"\{(.*?)\}", line)
-                    # Only include the line if every placeholder is present in responses
-                    if all(placeholder in responses for placeholder in placeholders):
-                        filled_lines.append(line.format(**responses))
-                return "\n".join(filled_lines)
+    filled_lines = []
+    for line in template_lines:
+        # Find placeholders in the line
+        placeholders = re.findall(r"\{(.*?)\}", line)
+        # Only include the line if every placeholder is present in responses
+        if all(placeholder in responses for placeholder in placeholders):
+            filled_lines.append(line.format(**responses))
+    return "\n".join(filled_lines)
        
 @cl.on_chat_start
 async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
-    if chat_profile == "Content Creation":
-        questions = load_questions("utils/questions_generate.json")
+    if chat_profile == "Web & App Content Creation":
         rx_content_create = rx_content_creator()
         cl.user_session.set("rx_content_creator", rx_content_create)
         chat_history_content_creator = []
         cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-        try:
-            user_responses = {}  # To store all user responses
-            for question, details in questions.items():
-                actions = [
-                    cl.Action(
-                        name=value,
-                        payload={"value": value},
-                        label=value
-                    ) for value in details['value']
-                ]
-
-                res = await cl.AskActionMessage(
-                    content=question,
-                    actions=actions,
-                    timeout=120,
-                    raise_on_timeout=True
-                ).send()
-
-                if res and res.get("payload"):
-                    selected_value = res["payload"].get("value")
-                    # If the user selects "Other (Enter your own)", ask for input
-                    if selected_value in ["Other (Enter your own)", "Yes, add additional info"]:
-                        res = await cl.AskUserMessage(
-                            content=f"{question}\nPlease type your answer in the chat box below.",
-                            timeout=120,
-                            raise_on_timeout=True
-                        ).send()
-                        selected_value = res["output"]
-
-                    # If the user selects "Skip", do not store a response
-                    if selected_value == "Skip⏩":
-                        continue
-
-                    abbrev = details.get("abbrev")
-                    user_responses[abbrev] = selected_value
-
-            # Function to filter and fill template lines only if all placeholders exist
-            def fill_template(template_lines, responses):
-                filled_lines = []
-                for line in template_lines:
-                    # Find placeholders in the line
-                    placeholders = re.findall(r"\{(.*?)\}", line)
-                    # Only include the line if every placeholder is present in responses
-                    if all(placeholder in responses for placeholder in placeholders):
-                        filled_lines.append(line.format(**responses))
-                return "\n".join(filled_lines)
-
-            # Build the final prompt template and user selection messages
-            filled_prompt = fill_template(USER_INPUT["content_gen_prompt"], user_responses)
-            filled_user_selections = fill_template(USER_SELECTION_MSG["selections"], user_responses)
-        
-            cl.user_session.set("filled_prompt", filled_prompt)
-            res = await cl.AskActionMessage(
-                content=filled_user_selections,
-                actions=[
-                    cl.Action(
-                        name="Yes",
-                        payload={"value": "Yes"},
-                        label="✅ Yes"
-                    ),
-                    cl.Action(
-                        name="No",
-                        payload={"value": "No"},
-                        label="❌ No"
-                    )
-                ]
-            ).send()
-        except Exception as e:
-            logging.error(f"Timed out, responses not entered in time. Error: {e}...")
-            await cl.Message(content="Timed out, responses not entered in time. Please start a new chat.").send()
-            return
-
-        max_retries = 3
-        if res and res.get("payload").get("value") == "Yes":
-            query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
-            config = {"configurable": {"thread_id": "rx_contentgen"}}
-            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
-            for attempt in range(max_retries):
-                try:
-                    full_msg = ""
-                    async for chunk in rx_content_create.astream(
-                        query,
-                        config=config
-                    ):
-                        await msg_contentgen.stream_token(chunk)
-                        full_msg += chunk
-
-                    chat_history_content_creator.append(HumanMessage(content=filled_prompt))
-                    chat_history_content_creator.append(AIMessage(content=full_msg))
-                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-                    await msg_contentgen.send()
-                    return
-
-                except Exception as e:
-                    logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
-        else:
-            await cl.Message(content="Please start a new chat to generate content.").send()
-            return
+        # Dynamically load questions from the JSON file.
+        questions = load_questions()
+        # Create the custom element with the questions.
+        multi_select_element = cl.CustomElement(
+            name="MultiSelectQuestions",
+            props={"questions": questions}
+        )
+        form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
+        cl.user_session.set("form_msg", form_msg)
+        await form_msg.send()
     
     elif chat_profile == "Content Refinement":
         rx_copywrite = rx_copywriter()
@@ -414,8 +326,6 @@ async def on_chat_start():
         try:
             user_responses = {}  # To store all user responses
             for details in questions['questions']:
-                print(details)
-                
                 actions = [
                     cl.Action(
                         name=value,
@@ -423,7 +333,6 @@ async def on_chat_start():
                         label=value
                     ) for value in details['value']
                 ]
-                print(actions)
 
                 res = await cl.AskActionMessage(
                     content=details["question"],
@@ -471,7 +380,6 @@ async def on_chat_start():
                 prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
                 prompt_email_template += "\n\n" + email_template
 
-            print('prompt_email_template', prompt_email_template)
             res = await cl.AskActionMessage(
                 content=filled_user_selections,
                 actions=[
@@ -523,16 +431,94 @@ async def on_chat_start():
             return
         
        
+@cl.action_callback("submit_selections")
+async def on_submit_selections(action):
+    form_msg = cl.user_session.get("form_msg")
+    await form_msg.remove()
+    # Extract the selections payload and store it for later use.
+    selections = action.payload.get("selections", [])
+    
+    # Build a mapping: questionId -> answer (only if answer is non-empty)
+    mapping = {}
+    for q in selections:
+        answer = q.get("selected", "").strip()
+        if answer:
+            mapping[q["questionId"]] = answer
+
+    # If no selections were made, inform the user.
+    if not mapping:
+        await cl.Message(content="Please make at least one selection before submitting.").send()
+        return
+
+    # Retrieve the prompt template (a list of lines)
+    prompt_template = USER_INPUT["content_gen_prompt"]
+
+    # We'll separate header lines (which have no placeholders) from selection lines.
+    header_lines = []
+    selection_lines = []
+    
+    for line in prompt_template:
+        # Find placeholders in the line (things within {})
+        placeholders = re.findall(r'\{(.+?)\}', line)
+        if placeholders:
+            # Only include the line if every placeholder in it has an answer.
+            if all(ph in mapping for ph in placeholders):
+                # Remove any existing numbering at the beginning (e.g., "1. ", "2. ", etc.)
+                clean_line = re.sub(r'^\s*\d+\.\s*', '', line)
+                selection_lines.append(clean_line)
+        else:
+            # Lines without placeholders (e.g., a header) are always included.
+            header_lines.append(line)
+    
+    # Now, renumber the selection lines sequentially.
+    numbered_lines = []
+    for i, line in enumerate(selection_lines, start=1):
+        # Format the line with the mapping values.
+        formatted_line = line.format(**mapping)
+        numbered_lines.append(f"{i}. {formatted_line}")
+    
+    # Combine header (if any) and the numbered selection lines.
+    if header_lines:
+        filled_prompt = "\n".join(header_lines) + "\n" + "\n".join(numbered_lines)
+    else:
+        filled_prompt = "\n".join(numbered_lines)
+    
+    await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
+    rx_content_create = cl.user_session.get("rx_content_creator")
+    chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
+    max_retries = 3
+    query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
+    config = {"configurable": {"thread_id": "rx_contentgen"}}
+    msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+    for attempt in range(max_retries):
+        try:
+            full_msg = ""
+            async for chunk in rx_content_create.astream(
+                query,
+                config=config
+            ):
+                await msg_contentgen.stream_token(chunk)
+                full_msg += chunk
+
+            chat_history_content_creator.append(HumanMessage(content=filled_prompt))
+            chat_history_content_creator.append(AIMessage(content=full_msg))
+            cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+            await msg_contentgen.send()
+            return
+
+        except Exception as e:
+            logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
 @cl.on_message
 async def on_message(message: cl.Message):
     chat_profile = cl.user_session.get("chat_profile")
     user_msg = message.content
     
-    if chat_profile == "Content Creation":
+    if chat_profile == "Web & App Content Creation":
         rx_content_create = cl.user_session.get("rx_content_creator")
         chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
         if len(chat_history_content_creator) == 0:
-            await cl.Message(content="Please start a new chat to generate content.").send()
+            await cl.Message(content="Please fill and submit the questions above to start").send()
             return
         query = {"chat_history": chat_history_content_creator, "input": user_msg}
         config = {"configurable": {"thread_id": message.thread_id}}
@@ -565,9 +551,7 @@ async def on_message(message: cl.Message):
         msg_copywriter = cl.Message(content="", author="Riyadh Air AI Web Research")
         max_retries = 3
         if message.elements:
-            print('element detected')
             if message.elements[0].name.endswith('.docx'):
-            #if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in message.elements[0].mime:
                 file_element = message.elements[0]
                 path = file_element.path
                 doc_content = read_docx(path)
@@ -583,7 +567,6 @@ async def on_message(message: cl.Message):
                         f"{user_msg}:\n\nThe following is content from an attached PDF document, use it to "
                         f"supplement your answer:\n\n{doc_content}"
                     )
-        print(user_msg)
         query = {"chat_history": chat_history_copywriter, "input": user_msg}
         for attempt in range(max_retries):
             try:
@@ -604,13 +587,7 @@ async def on_message(message: cl.Message):
             except Exception as e:
                 logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
 
-    # rx_lifecycle_create = rx_lifecycle_creator()
-    # cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
-    # chat_history_lifecycle_creator = []
-    # cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
-    
     elif chat_profile == "Lifecycle Content Creation":
-        print(user_msg)
         rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
         chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
         if len(chat_history_lifecycle_creator) == 0:
