@@ -8,6 +8,7 @@
       <th>Name</th>
       <th>Created At</th>
       <th>User</th>
+      <th>Tags</th>
     </tr>
   </thead>
   <tbody>
@@ -17,6 +18,7 @@
       <td>{{ thread.name or 'N/A' }}</td>
       <td>{{ thread.createdAt }}</td>
       <td>{{ thread.user.identifier if thread.user else 'N/A' }}</td>
+      <td>{{ thread.tags | join(", ") if thread.tags else 'N/A' }}</td>
     </tr>
     {% endfor %}
   </tbody>

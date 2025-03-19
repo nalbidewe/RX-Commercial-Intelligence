@@ -1,6 +1,21 @@
 {
-    "**What is the purpose of this content?**": {
-        "type": "text",
+    "What is the type of content?": {
+        "type": "options",
+        "value": [
+            "Article",
+            "Blog Post",
+            "Product Description",
+            "Email Campaign",
+            "Social Media Post",
+            "Press Release",
+            "Newsletter",
+            "Other (Enter your own)"
+        ],
+        "abbrev": "content_type",
+        "mandatory": true
+    },
+    "What is the purpose of this content?": {
+        "type": "options",
         "value": [
             "Introduce the airline's story, values, and purpose",
             "Showcase Riyadh as a travel destination",
@@ -11,19 +26,18 @@
         "abbrev": "content_purpose",
         "mandatory": true
     },
-    "**Who is the target audience for this content?**": {
+    "Who is the target audience for this content?": {
         "type": "options",
         "value": [
             "General Public (Guests)",
             "Investor Relations",
             "Media",
-            "Other (Enter your own)",
-            "Skip⏩"
+            "Other (Enter your own)"
         ],
         "abbrev": "target_audience",
         "mandatory": true
     },
-    "**What is the key message of this content?**": {
+    "What is the key message of this content?": {
         "type": "options",
         "value": [
             "Our vision and values as a leading airline",
@@ -32,47 +46,29 @@
             "Highlights of fleet capabilities and amenities",
             "Job opportunities and employee benefits",
             "Exclusive travel experiences and deals",
-            "Other (Enter your own)",
-            "Skip⏩"
+            "Other (Enter your own)"
         ],
         "abbrev": "key_message",
         "mandatory": true
     },
-    "**What is the type of content?**": {
-        "type": "options",
-        "value": [
-            "Article",
-            "Blog Post",
-            "Product Description",
-            "Email Campaign",
-            "Social Media Post",
-            "Press Release",
-            "Newsletter",
-            "Other (Enter your own)",
-            "Skip⏩"
-        ],
-        "abbrev": "content_type",
-        "mandatory": true
-    },
-    "**What platform is this content intended for?**": {
+    "What platform is this content intended for?": {
         "type": "options",
         "value": [
             "Website (moderately detailed and to the point)",
             "App (summarized and concise)",
-            "Skip⏩"
+            "Other (Enter your own)"
         ],
         "abbrev": "content_platform",
         "mandatory": true
     },
-    "**What is your desired content length?**": {
+    "What is your desired content length?": {
         "type": "options",
         "value": [
             "Let the AI decide",
             "Short",
             "Medium",
             "Long",
-            "Other (Enter your own)",
-            "Skip⏩"
+            "Other (Enter your own)"
         ],
         "abbrev": "content_length",
         "mandatory": true

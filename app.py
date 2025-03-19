@@ -27,6 +27,13 @@ from pymongo import MongoClient
 
 # Import your system prompt
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
+from utils.prompt_generate_lifecycle import (
+    USER_INPUT_LIFECYCLE, 
+    USER_SELECTION_MSG_LIFECYCLE, 
+    SYSTEM_LIFECYCLE_PROMPT, 
+    EMAIL_TEMPLATE
+)
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
@@ -76,13 +83,6 @@ client = MongoClient(CONNECTION_STRING)
 
 db = client["AIContentGenApp"]
 collection = db["Users"]
-
-
-# Load JSON from file
-def load_questions(file_path):
-    with open(file_path, "r", encoding="utf-8") as file:
-        return json.load(file)
-
 
 def read_pdf(file) -> str:
     """
@@ -144,6 +144,38 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
         encoding = tiktoken.get_encoding('cl100k_base')
     return len(encoding.encode(text))
 
+def load_questions(filename="utils/questions_generate.json"):
+    # Load questions from the JSON file.
+    with open(filename, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    # Handle different JSON structures
+    if "questions" in data:  # Lifecycle questions format
+        questions = []
+        for details in data["questions"]:
+            options = details.get("value", [])
+            if isinstance(options, list):
+                questions.append({
+                    "questionId": details.get("abbrev", ""),
+                    "question": details.get("question", ""),
+                    "type": details.get("type", "options"),
+                    "options": options,
+                    "selected": "",
+                    "isOther": False,
+                    "subQuestions": details.get("sub_questions", {})
+                })
+    else:  # Web & App content format
+        questions = []
+        for question_text, details in data.items():
+            questions.append({
+                "questionId": details["abbrev"],
+                "question": question_text,
+                "type": details["type"],
+                "options": details["value"],
+                "selected": "",
+                "isOther": False
+            })
+    return questions
 
 @cl.cache
 def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
@@ -172,6 +204,20 @@ def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache
+def rx_lifecycle_creator():
+
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "{sys_msg}"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """Authenticate user based on credentials stored in MongoDB."""
@@ -191,17 +237,21 @@ def auth_callback(username: str, password: str):
 @cl.set_chat_profiles
 async def chat_profile(current_user: cl.User):
     user_role = current_user.metadata.get("role")
-    print(f"User role: {user_role}")
     return [
         cl.ChatProfile(
-            name="Content Creation",
-            markdown_description="Generate content for Riyadh Air.",
-            icon="/public/create_2.svg",
+            name="Web & App Content Creation",
+            markdown_description="Generate Web & App content for Riyadh Air.",
+            icon="/public/content.svg",
+        ),
+         cl.ChatProfile(
+            name="Lifecycle Content Creation",
+            markdown_description="Generate Lifecycle content for Riyadh Air.",
+            icon="/public/lifecycle.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
         ),
         cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
-            icon="/public/refine_3.svg",
+            icon="/public/refine.svg",
             starters=[
                 cl.Starter(
                     label="Usage Instructions",
@@ -212,130 +262,215 @@ async def chat_profile(current_user: cl.User):
         )
     ]
 
+def adjust_template(template_lines, responses):
+    filled_lines = []
+    for line in template_lines:
+        # Find placeholders in the line
+        placeholders = re.findall(r"\{(.*?)\}", line)
+        # Only include the line if every placeholder is present in responses
+        if all(placeholder in responses for placeholder in placeholders):
+            filled_lines.append(line.format(**responses))
+    return "\n".join(filled_lines)
+       
 @cl.on_chat_start
 async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
-    if chat_profile == "Content Creation":
-        questions = load_questions("utils/questions_generate.json")
+    if chat_profile == "Web & App Content Creation":
         rx_content_create = rx_content_creator()
         cl.user_session.set("rx_content_creator", rx_content_create)
         chat_history_content_creator = []
         cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-        try:
-            user_responses = {}  # To store all user responses
-            for question, details in questions.items():
-                actions = [
-                    cl.Action(
-                        name=value,
-                        payload={"value": value},
-                        label=value
-                    ) for value in details['value']
-                ]
-
-                res = await cl.AskActionMessage(
-                    content=question,
-                    actions=actions,
-                    timeout=120,
-                    raise_on_timeout=True
-                ).send()
-
-                if res and res.get("payload"):
-                    selected_value = res["payload"].get("value")
-                    # If the user selects "Other (Enter your own)", ask for input
-                    if selected_value == "Other (Enter your own)":
-                        res = await cl.AskUserMessage(
-                            content=f"{question}\nPlease type your answer in the chat box below.",
-                            timeout=120,
-                            raise_on_timeout=True
-                        ).send()
-                        selected_value = res["output"]
-
-                    # If the user selects "Skip", do not store a response
-                    if selected_value == "Skip⏩":
-                        continue
-
-                    abbrev = details.get("abbrev")
-                    user_responses[abbrev] = selected_value
-
-            # Function to filter and fill template lines only if all placeholders exist
-            def fill_template(template_lines, responses):
-                filled_lines = []
-                for line in template_lines:
-                    # Find placeholders in the line
-                    placeholders = re.findall(r"\{(.*?)\}", line)
-                    # Only include the line if every placeholder is present in responses
-                    if all(placeholder in responses for placeholder in placeholders):
-                        filled_lines.append(line.format(**responses))
-                return "\n".join(filled_lines)
-
-            # Build the final prompt template and user selection messages
-            filled_prompt = fill_template(USER_INPUT["content_gen_prompt"], user_responses)
-            filled_user_selections = fill_template(USER_SELECTION_MSG["selections"], user_responses)
-        
-            cl.user_session.set("filled_prompt", filled_prompt)
-            res = await cl.AskActionMessage(
-                content=filled_user_selections,
-                actions=[
-                    cl.Action(
-                        name="Yes",
-                        payload={"value": "Yes"},
-                        label="✅ Yes"
-                    ),
-                    cl.Action(
-                        name="No",
-                        payload={"value": "No"},
-                        label="❌ No"
-                    )
-                ]
-            ).send()
-        except Exception as e:
-            logging.error(f"Timed out, responses not entered in time. Error: {e}...")
-            await cl.Message(content="Timed out, responses not entered in time. Please start a new chat.").send()
-            return
-
-        max_retries = 3
-        if res and res.get("payload").get("value") == "Yes":
-            query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
-            config = {"configurable": {"thread_id": "rx_contentgen"}}
-            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
-            for attempt in range(max_retries):
-                try:
-                    full_msg = ""
-                    async for chunk in rx_content_create.astream(
-                        query,
-                        config=config
-                    ):
-                        await msg_contentgen.stream_token(chunk)
-                        full_msg += chunk
-
-                    chat_history_content_creator.append(HumanMessage(content=filled_prompt))
-                    chat_history_content_creator.append(AIMessage(content=full_msg))
-                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-                    await msg_contentgen.send()
-                    return
-
-                except Exception as e:
-                    logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
-        else:
-            await cl.Message(content="Please start a new chat to generate content.").send()
-            return
+        # Dynamically load questions from the JSON file.
+        questions = load_questions()
+        # Create the custom element with the questions.
+        multi_select_element = cl.CustomElement(
+            name="MultiSelectQuestions",
+            props={"questions": questions}
+        )
+        form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
+        cl.user_session.set("form_msg", form_msg)
+        await form_msg.send()
     
     elif chat_profile == "Content Refinement":
         rx_copywrite = rx_copywriter()
         cl.user_session.set("rx_copywriter", rx_copywrite)
         chat_history_copywriter = []
         cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
+    
+    elif chat_profile == "Lifecycle Content Creation":
+        questions = load_questions("utils/question_generate_lifecycle.json")
+        rx_lifecycle_create = rx_lifecycle_creator()
+        cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
+        chat_history_lifecycle_creator = []
+        cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+        
+        # Create the custom element with the questions
+        multi_select_element = cl.CustomElement(
+            name="MultiSelectQuestions",
+            props={"questions": questions}
+        )
+        form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
+        cl.user_session.set("lifecycle_form_msg", form_msg)
+        await form_msg.send()
+        
+       
+@cl.action_callback("submit_selections")
+async def on_submit_selections(action):
+    form_msg = cl.user_session.get("form_msg")
+    await form_msg.remove()
+    # Extract the selections payload and store it for later use.
+    selections = action.payload.get("selections", [])
+    
+    # Build a mapping: questionId -> answer (only if answer is non-empty)
+    mapping = {}
+    for q in selections:
+        answer = q.get("selected", "").strip()
+        if answer:
+            mapping[q["questionId"]] = answer
+
+    # If no selections were made, inform the user.
+    if not mapping:
+        await cl.Message(content="Please make at least one selection before submitting.").send()
+        return
+
+    # Retrieve the prompt template (a list of lines)
+    prompt_template = USER_INPUT["content_gen_prompt"]
+
+    # We'll separate header lines (which have no placeholders) from selection lines.
+    header_lines = []
+    selection_lines = []
+    
+    for line in prompt_template:
+        # Find placeholders in the line (things within {})
+        placeholders = re.findall(r'\{(.+?)\}', line)
+        if placeholders:
+            # Only include the line if every placeholder in it has an answer.
+            if all(ph in mapping for ph in placeholders):
+                # Remove any existing numbering at the beginning (e.g., "1. ", "2. ", etc.)
+                clean_line = re.sub(r'^\s*\d+\.\s*', '', line)
+                selection_lines.append(clean_line)
+        else:
+            # Lines without placeholders (e.g., a header) are always included.
+            header_lines.append(line)
+    
+    # Now, renumber the selection lines sequentially.
+    numbered_lines = []
+    for i, line in enumerate(selection_lines, start=1):
+        # Format the line with the mapping values.
+        formatted_line = line.format(**mapping)
+        numbered_lines.append(f"{i}. {formatted_line}")
+    
+    # Combine header (if any) and the numbered selection lines.
+    if header_lines:
+        filled_prompt = "\n".join(header_lines) + "\n" + "\n".join(numbered_lines)
+    else:
+        filled_prompt = "\n".join(numbered_lines)
+    
+    await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
+    rx_content_create = cl.user_session.get("rx_content_creator")
+    chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
+    max_retries = 3
+    query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
+    config = {"configurable": {"thread_id": "rx_contentgen"}}
+    msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+    for attempt in range(max_retries):
+        try:
+            full_msg = ""
+            async for chunk in rx_content_create.astream(
+                query,
+                config=config
+            ):
+                await msg_contentgen.stream_token(chunk)
+                full_msg += chunk
+
+            chat_history_content_creator.append(HumanMessage(content=filled_prompt))
+            chat_history_content_creator.append(AIMessage(content=full_msg))
+            cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+            await msg_contentgen.send()
+            return
+
+        except Exception as e:
+            logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
+@cl.action_callback("submit_lifecycle_selections")
+async def on_submit_lifecycle_selections(action):
+    form_msg = cl.user_session.get("lifecycle_form_msg")
+    await form_msg.remove()
+    
+    # Extract the selections payload
+    selections = action.payload.get("selections", [])
+    
+    # Build a mapping of answers
+    user_responses = {}
+    for q in selections:
+        answer = q.get("selected", "").strip()
+        if answer:
+            user_responses[q["questionId"]] = answer
+    
+    # If no selections were made, inform the user
+    if not user_responses:
+        await cl.Message(content="Please make at least one selection before submitting.").send()
+        return
+    
+    try:
+        # Process the selections to create the prompt
+        filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
+        
+        cl.user_session.set("filled_prompt", filled_prompt)
+        
+        # Handle email template if applicable
+        email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""), "")
+        prompt_email_template = ""
+        if len(email_template) > 0:
+            prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
+            prompt_email_template += "\n\n" + email_template
+        
+        
+        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
+        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
+        chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
+        
+        query = {
+            "chat_history": chat_history_lifecycle_creator,
+            "sys_msg": SYSTEM_LIFECYCLE_PROMPT + prompt_email_template,
+            "input": filled_prompt
+        }
+        config = {"configurable": {"thread_id": "rx_contentgen"}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_lifecycle_create.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+                
+                chat_history_lifecycle_creator.append(HumanMessage(content=filled_prompt))
+                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                await msg_contentgen.send()
+                return
+            
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    except Exception as e:
+        logging.error(f"Error processing lifecycle selections: {e}")
+        await cl.Message(content="An error occurred processing your selections. Please try again.").send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
     chat_profile = cl.user_session.get("chat_profile")
     user_msg = message.content
     
-    if chat_profile == "Content Creation":
+    if chat_profile == "Web & App Content Creation":
         rx_content_create = cl.user_session.get("rx_content_creator")
         chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
         if len(chat_history_content_creator) == 0:
-            await cl.Message(content="Please start a new chat to generate content.").send()
+            await cl.Message(content="Please fill and submit the questions above to start").send()
             return
         query = {"chat_history": chat_history_content_creator, "input": user_msg}
         config = {"configurable": {"thread_id": message.thread_id}}
@@ -368,9 +503,7 @@ async def on_message(message: cl.Message):
         msg_copywriter = cl.Message(content="", author="Riyadh Air AI Web Research")
         max_retries = 3
         if message.elements:
-            print('element detected')
             if message.elements[0].name.endswith('.docx'):
-            #if "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in message.elements[0].mime:
                 file_element = message.elements[0]
                 path = file_element.path
                 doc_content = read_docx(path)
@@ -386,7 +519,6 @@ async def on_message(message: cl.Message):
                         f"{user_msg}:\n\nThe following is content from an attached PDF document, use it to "
                         f"supplement your answer:\n\n{doc_content}"
                     )
-        print(user_msg)
         query = {"chat_history": chat_history_copywriter, "input": user_msg}
         for attempt in range(max_retries):
             try:
@@ -402,6 +534,38 @@ async def on_message(message: cl.Message):
                 chat_history_copywriter.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
                 await msg_copywriter.send()
+                return
+
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
+    elif chat_profile == "Lifecycle Content Creation":
+        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
+        chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
+        if len(chat_history_lifecycle_creator) == 0:
+            await cl.Message(content="Please start a new chat to generate content.").send()
+            return
+        query = {"chat_history": chat_history_lifecycle_creator,
+                "sys_msg": SYSTEM_LIFECYCLE_PROMPT,
+                "input": user_msg}
+        # query = {"chat_history": chat_history_lifecycle_creator, "input": user_msg}
+        config = {"configurable": {"thread_id": message.thread_id}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_lifecycle_create.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+
+                chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
+                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                await msg_contentgen.send()
                 return
 
             except Exception as e:

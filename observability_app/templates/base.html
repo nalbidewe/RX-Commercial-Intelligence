@@ -9,11 +9,14 @@
     rel="stylesheet"
   >
   <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .navbar-brand { opacity: 0; transition: opacity 1.5s ease-in-out; }
+  </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/">Hamza's Intelligence Center (HIC)</a>
+    <a class="navbar-brand d-block text-center mx-auto" href="/">Hamza's Intelligence Center (HIC)</a>
   </div>
 </nav>
 <div class="container mt-4">
@@ -21,6 +24,11 @@
 </div>
 <script
   src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js">
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('.navbar-brand').style.opacity = '1';
+  });
 </script>
 {% block scripts %}{% endblock %}
 </body>
