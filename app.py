@@ -144,11 +144,14 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
         encoding = tiktoken.get_encoding('cl100k_base')
     return len(encoding.encode(text))
 
-def load_questions(filename="utils/questions_generate.json"):
+def load_questions(filename="utils/questions_generate_webapp.json"):
     # Load questions from the JSON file.
     with open(filename, "r", encoding="utf-8") as f:
         data = json.load(f)
     
+    # Get the tool type, defaulting to "web_app" if not specified
+    tool_type = data.get("tool_type", "web_app")
+        
     # Handle different JSON structures
     if "questions" in data:  # Lifecycle questions format
         questions = []
@@ -162,19 +165,23 @@ def load_questions(filename="utils/questions_generate.json"):
                     "options": options,
                     "selected": "",
                     "isOther": False,
-                    "subQuestions": details.get("sub_questions", {})
+                    "subQuestions": details.get("sub_questions", {}),
+                    "toolType": tool_type  # Ensure consistent casing
                 })
     else:  # Web & App content format
         questions = []
         for question_text, details in data.items():
-            questions.append({
-                "questionId": details["abbrev"],
-                "question": question_text,
-                "type": details["type"],
-                "options": details["value"],
-                "selected": "",
-                "isOther": False
-            })
+            if question_text != "tool_type":  # Skip the tool_type entry
+                questions.append({
+                    "questionId": details.get("abbrev", ""),
+                    "question": question_text,
+                    "type": details["type"],
+                    "options": details["value"],
+                    "selected": "",
+                    "isOther": False,
+                    "toolType": tool_type  # Ensure consistent casing
+                })
+    
     return questions
 
 @cl.cache
@@ -185,7 +192,11 @@ def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name,
+                           temperature=0.5,
+                            api_key=azure_openai_api_key,
+                            api_version=openai_api_version,
+                            azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -199,7 +210,11 @@ def rx_copywriter(sys_msg: str = REFINE_SYS_PROMPT):
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name,
+                           temperature=0,
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -213,7 +228,11 @@ def rx_lifecycle_creator():
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}")
     ])
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    llm = AzureChatOpenAI(model=azure_chat_model_name,
+                           temperature=0.5,
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
     output_parser = StrOutputParser()
     chain = prompt | llm | output_parser
     return chain
@@ -371,14 +390,12 @@ async def on_submit_selections(action):
     chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
     max_retries = 3
     query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
-    config = {"configurable": {"thread_id": "rx_contentgen"}}
     msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
     for attempt in range(max_retries):
         try:
             full_msg = ""
             async for chunk in rx_content_create.astream(
-                query,
-                config=config
+                query
             ):
                 await msg_contentgen.stream_token(chunk)
                 full_msg += chunk
@@ -435,7 +452,6 @@ async def on_submit_lifecycle_selections(action):
             "sys_msg": SYSTEM_LIFECYCLE_PROMPT + prompt_email_template,
             "input": filled_prompt
         }
-        config = {"configurable": {"thread_id": "rx_contentgen"}}
         msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
 
         max_retries = 3
@@ -443,8 +459,7 @@ async def on_submit_lifecycle_selections(action):
             try:
                 full_msg = ""
                 async for chunk in rx_lifecycle_create.astream(
-                    query,
-                    config=config
+                    query
                 ):
                     await msg_contentgen.stream_token(chunk)
                     full_msg += chunk
