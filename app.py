@@ -144,20 +144,37 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
         encoding = tiktoken.get_encoding('cl100k_base')
     return len(encoding.encode(text))
 
-def load_questions():
+def load_questions(filename="utils/questions_generate.json"):
     # Load questions from the JSON file.
-    with open("utils/questions_generate.json", "r", encoding="utf-8") as f:
+    with open(filename, "r", encoding="utf-8") as f:
         data = json.load(f)
-    questions = []
-    for question_text, details in data.items():
-        questions.append({
-            "questionId": details["abbrev"],
-            "question": question_text,
-            "type": details["type"],      # All questions are of type "options" by default.
-            "options": details["value"],
-            "selected": "",
-            "isOther": False              # Extra flag to track if "Other" was selected.
-        })
+    
+    # Handle different JSON structures
+    if "questions" in data:  # Lifecycle questions format
+        questions = []
+        for details in data["questions"]:
+            options = details.get("value", [])
+            if isinstance(options, list):
+                questions.append({
+                    "questionId": details.get("abbrev", ""),
+                    "question": details.get("question", ""),
+                    "type": details.get("type", "options"),
+                    "options": options,
+                    "selected": "",
+                    "isOther": False,
+                    "subQuestions": details.get("sub_questions", {})
+                })
+    else:  # Web & App content format
+        questions = []
+        for question_text, details in data.items():
+            questions.append({
+                "questionId": details["abbrev"],
+                "question": question_text,
+                "type": details["type"],
+                "options": details["value"],
+                "selected": "",
+                "isOther": False
+            })
     return questions
 
 @cl.cache
@@ -245,42 +262,6 @@ async def chat_profile(current_user: cl.User):
         )
     ]
 
-async def process_sub_questions(sub_questions_list):
-    responses = {}
-    for sub_question in sub_questions_list:
-        actions = [
-            cl.Action(name=value, payload={"value": value}, label=value)
-            for value in sub_question["value"]
-        ]
-        res = await cl.AskActionMessage(
-            content=sub_question["question"],
-            actions=actions,
-            timeout=300,
-            raise_on_timeout=True
-        ).send()
-        
-        if res and res.get("payload"):
-            answer = res["payload"].get("value")
-            if answer in ["Other (Enter your own)", "Yes, add additional info"]:
-                res = await cl.AskUserMessage(
-                    content=f"{sub_question['question']}\nPlease type your answer in the chat box below:",
-                    timeout=300,
-                    raise_on_timeout=True
-                ).send()
-                answer = res["output"]
-            
-            # Use a key for this sub-question
-            key = sub_question.get("abbrev")
-            responses[key] = answer
-            
-            # If this sub_question has further nested sub_questions, process them recursively.
-            if "sub_questions" in sub_question:
-                nested_responses = await process_sub_questions(sub_question["sub_questions"][answer])
-                responses.update(nested_responses)
-            else:
-                continue
-    return responses
-
 def adjust_template(template_lines, responses):
     filled_lines = []
     for line in template_lines:
@@ -322,113 +303,15 @@ async def on_chat_start():
         cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
         chat_history_lifecycle_creator = []
         cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
-
-        try:
-            user_responses = {}  # To store all user responses
-            for details in questions['questions']:
-                actions = [
-                    cl.Action(
-                        name=value,
-                        payload={"value": value},
-                        label=value
-                    ) for value in details['value']
-                ]
-
-                res = await cl.AskActionMessage(
-                    content=details["question"],
-                    actions=actions,
-                    timeout=300,
-                    raise_on_timeout=True
-                ).send()
-                
-                if res and res.get("payload"):
-                    answer = res["payload"].get("value")
-                    if answer in ["Other (Enter your own)", "Yes, add additional info"]:
-                        res = await cl.AskUserMessage(
-                            content=f'{details["question"]}\nPlease type your answer in the chat box below.',
-                            timeout=300,
-                            raise_on_timeout=True
-                        ).send()
-                        selected_value = res["output"]
-                    else:
-                        selected_value = res["payload"].get("value")
-
-                    # If the user selects "Skip", do not store a response
-                    if selected_value == "Skip⏩":
-                        continue
-
-                    abbrev = details.get("abbrev")
-                    user_responses[abbrev] = selected_value
-                
-                if "sub_questions" in details:
-                    sub_resp = await process_sub_questions(details["sub_questions"].get(selected_value, []))
-                    user_responses.update(sub_resp)
-
-            class DefaultDict(dict):
-                def __missing__(self, key):
-                    return "N/A"
-                
-            filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
-            filled_user_selections = adjust_template(USER_SELECTION_MSG_LIFECYCLE["selections"], user_responses)
         
-            cl.user_session.set("filled_prompt", filled_prompt)
-
-            email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""),  "")
-
-            prompt_email_template = ""
-            if len(email_template) > 0:
-                prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
-                prompt_email_template += "\n\n" + email_template
-
-            res = await cl.AskActionMessage(
-                content=filled_user_selections,
-                actions=[
-                    cl.Action(
-                        name="Yes",
-                        payload={"value": "Yes"},
-                        label="✅ Yes"
-                    ),
-                    cl.Action(
-                        name="No",
-                        payload={"value": "No"},
-                        label="❌ No"
-                    )
-                ]
-            ).send()
-        except Exception as e:
-            logging.error(f"Timed out, responses not entered in time. Error: {e}...")
-            await cl.Message(content="Timed out, responses not entered in time. Please start a new chat.").send()
-            return
-
-        max_retries = 3
-        if res and res.get("payload").get("value") == "Yes":
-            query = {"chat_history": chat_history_lifecycle_creator,
-                     "sys_msg": SYSTEM_LIFECYCLE_PROMPT + prompt_email_template,
-                     "input": filled_prompt}
-            config = {"configurable": {"thread_id": "rx_contentgen"}}
-            msg_id = str(uuid.uuid4())
-            msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research", id=msg_id)
-            for attempt in range(max_retries):
-                try:
-                    full_msg = ""
-                    async for chunk in rx_lifecycle_create.astream(
-                        query,
-                        config=config
-                    ):
-                        await msg_contentgen.stream_token(chunk)
-                        full_msg += chunk
-
-                    chat_history_lifecycle_creator.append(HumanMessage(content=filled_prompt))
-                    chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
-                    cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
-                    await msg_contentgen.send()
-                    return
-
-                except Exception as e:
-                    logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
-        else:
-            await cl.Message(content="Please start a new chat to generate content.").send()
-            return
+        # Create the custom element with the questions
+        multi_select_element = cl.CustomElement(
+            name="MultiSelectQuestions",
+            props={"questions": questions}
+        )
+        form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
+        cl.user_session.set("lifecycle_form_msg", form_msg)
+        await form_msg.send()
         
        
 @cl.action_callback("submit_selections")
@@ -508,6 +391,75 @@ async def on_submit_selections(action):
 
         except Exception as e:
             logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
+@cl.action_callback("submit_lifecycle_selections")
+async def on_submit_lifecycle_selections(action):
+    form_msg = cl.user_session.get("lifecycle_form_msg")
+    await form_msg.remove()
+    
+    # Extract the selections payload
+    selections = action.payload.get("selections", [])
+    
+    # Build a mapping of answers
+    user_responses = {}
+    for q in selections:
+        answer = q.get("selected", "").strip()
+        if answer:
+            user_responses[q["questionId"]] = answer
+    
+    # If no selections were made, inform the user
+    if not user_responses:
+        await cl.Message(content="Please make at least one selection before submitting.").send()
+        return
+    
+    try:
+        # Process the selections to create the prompt
+        filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
+        
+        cl.user_session.set("filled_prompt", filled_prompt)
+        
+        # Handle email template if applicable
+        email_template = EMAIL_TEMPLATE.get(user_responses.get("content_purpose", ""), "")
+        prompt_email_template = ""
+        if len(email_template) > 0:
+            prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
+            prompt_email_template += "\n\n" + email_template
+        
+        
+        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
+        rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
+        chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
+        
+        query = {
+            "chat_history": chat_history_lifecycle_creator,
+            "sys_msg": SYSTEM_LIFECYCLE_PROMPT + prompt_email_template,
+            "input": filled_prompt
+        }
+        config = {"configurable": {"thread_id": "rx_contentgen"}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_lifecycle_create.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+                
+                chat_history_lifecycle_creator.append(HumanMessage(content=filled_prompt))
+                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                await msg_contentgen.send()
+                return
+            
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    except Exception as e:
+        logging.error(f"Error processing lifecycle selections: {e}")
+        await cl.Message(content="An error occurred processing your selections. Please try again.").send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -618,4 +570,3 @@ async def on_message(message: cl.Message):
 
             except Exception as e:
                 logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
-    

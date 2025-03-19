@@ -5,6 +5,7 @@
             "Article",
             "Blog Post",
             "Product Description",
+            "Email Campaign",
             "Social Media Post",
             "Press Release",
             "Newsletter",
@@ -14,7 +15,7 @@
         "mandatory": true
     },
     "What is the purpose of this content?": {
-        "type": "text",
+        "type": "options",
         "value": [
             "Introduce the airline's story, values, and purpose",
             "Showcase Riyadh as a travel destination",
