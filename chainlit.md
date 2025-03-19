@@ -15,3 +15,9 @@ This document tracks the version history of the AI Content Gen App
     - Added content type as part of the questions of the guided flow.
     - Added a skip option in the selections to remove redundancy
     - Switched font family to Google's Roboto
+
+## v0.3 - Lifecycle Content Tool & UI Redesign
+- **Release Date:** 2025-03-19
+- **Notes:**
+    - Added lifecycle content creation tool that targets emails, SMS and push notifications.
+    - Redesigned the guided flow completely in the UI with a custom developed form-like structure, with dynamic sub-questions rendering upon selection of options.
