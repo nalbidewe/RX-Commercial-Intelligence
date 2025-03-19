@@ -26,6 +26,7 @@ import urllib.parse
 from pymongo import MongoClient
 
 # Import your system prompt
+from utils.prompt_generate_social_media import USER_SELECTION_SOCIAL_MEDIA, USER_INPUT_SOCIAL_MEDIA, SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE, 
@@ -99,7 +100,6 @@ def read_pdf(file) -> str:
     for page_num in range(len(reader.pages)):
         text += reader.pages[page_num].extract_text()
     return text
-
 
 def read_docx(file) -> str:
     """
@@ -218,6 +218,20 @@ def rx_lifecycle_creator():
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache
+def rx_social_media_creator(sys_msg: str = SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT):
+
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """Authenticate user based on credentials stored in MongoDB."""
@@ -259,6 +273,11 @@ async def chat_profile(current_user: cl.User):
                     icon="/public/help.svg",
                 ),
             ]
+        ),
+        cl.ChatProfile(
+            name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
+            markdown_description="Refine existing content for Riyadh Air.",
+            icon="/public/user_circle.svg"
         )
     ]
 
@@ -311,6 +330,22 @@ async def on_chat_start():
         )
         form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
         cl.user_session.set("lifecycle_form_msg", form_msg)
+        await form_msg.send()
+
+    elif chat_profile == "Social Media Content Creation":
+        questions = load_questions("utils/question_social_media.json")
+        rx_social_media_create = rx_social_media_creator()
+        cl.user_session.set("rx_social_media_creator", rx_social_media_create)
+        chat_history_social_media_creator = []
+        cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
+        
+        # Create the custom element with the questions
+        multi_select_element = cl.CustomElement(
+            name="MultiSelectQuestions",
+            props={"questions": questions}
+        )
+        form_msg = cl.Message(content="Please answer the following questions for social media content:", elements=[multi_select_element])
+        cl.user_session.set("social_media_form_msg", form_msg)
         await form_msg.send()
         
        
@@ -461,6 +496,67 @@ async def on_submit_lifecycle_selections(action):
         logging.error(f"Error processing lifecycle selections: {e}")
         await cl.Message(content="An error occurred processing your selections. Please try again.").send()
 
+@cl.action_callback("submit_social_media_selections")
+async def on_submit_social_media_selections(action):
+    form_msg = cl.user_session.get("social_media_form_msg")
+    await form_msg.remove()
+    
+    # Extract the selections payload
+    selections = action.payload.get("selections", [])
+    
+    # Build a mapping of answers
+    user_responses = {}
+    for q in selections:
+        answer = q.get("selected", "").strip()
+        if answer:
+            user_responses[q["questionId"]] = answer
+    
+    # If no selections were made, inform the user
+    if not user_responses:
+        await cl.Message(content="Please make at least one selection before submitting.").send()
+        return
+    
+    try:
+        # Process the selections to create the prompt
+        filled_prompt = adjust_template(USER_INPUT_SOCIAL_MEDIA["content_gen_prompt"], user_responses)
+        
+        cl.user_session.set("filled_prompt", filled_prompt)
+        
+    
+        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
+        rx_social_media_creator = cl.user_session.get("rx_social_media_creator")
+        chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
+        
+        query = {
+            "chat_history": chat_history_social_media_creator,
+            "input": filled_prompt
+        }
+        config = {"configurable": {"thread_id": "rx_contentgen"}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_social_media_creator.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+                
+                chat_history_social_media_creator.append(HumanMessage(content=filled_prompt))
+                chat_history_social_media_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
+                await msg_contentgen.send()
+                return
+            
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    except Exception as e:
+        logging.error(f"Error processing lifecycle selections: {e}")
+        await cl.Message(content="An error occurred processing your selections. Please try again.").send()
+
 @cl.on_message
 async def on_message(message: cl.Message):
     chat_profile = cl.user_session.get("chat_profile")
@@ -565,6 +661,37 @@ async def on_message(message: cl.Message):
                 chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+                await msg_contentgen.send()
+                return
+
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+    
+    elif chat_profile == "Social Media Content Creation":
+        rx_social_media_creator = cl.user_session.get("rx_social_media_creator")
+        chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
+        if len(chat_history_social_media_creator) == 0:
+            await cl.Message(content="Please start a new chat to generate content.").send()
+            return
+        query = {"chat_history": chat_history_social_media_creator,
+                "input": user_msg}
+
+        config = {"configurable": {"thread_id": message.thread_id}}
+        msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async for chunk in rx_social_media_creator.astream(
+                    query,
+                    config=config
+                ):
+                    await msg_contentgen.stream_token(chunk)
+                    full_msg += chunk
+
+                chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
+                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
                 await msg_contentgen.send()
                 return
 
