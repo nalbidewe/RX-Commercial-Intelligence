@@ -20,12 +20,14 @@ export default function MultiSelectQuestions() {
     })));
   }, []);
 
-  // Determine which action to call based on the first question's ID
+  // Determine which action to call based on tool type
+  // Check if any questions exist and look for toolType property on the first question
   const isLifecycleForm = initialQuestions.length > 0 && 
-                        (initialQuestions[0].questionId === "content_type" || 
-                         initialQuestions[0].question.includes("type of content"));
+    initialQuestions[0].toolType === "lifecycle";
   
-  const submitActionName = isLifecycleForm ? "submit_lifecycle_selections" : "submit_selections";
+  // Set the action name based on the form type
+  const submitActionName = isLifecycleForm ? 
+    "submit_lifecycle_selections" : "submit_selections";
 
   // Update selections and dynamically adjust visible questions
   const handleSelectChange = (questionId, value) => {
@@ -140,7 +142,7 @@ export default function MultiSelectQuestions() {
       selected, 
       isOther
     }));
-    
+        
     callAction({
       name: submitActionName,
       payload: { selections }

@@ -1,4 +1,5 @@
 {
+    "tool_type": "web_app",
     "What is the type of content?": {
         "type": "options",
         "value": [
