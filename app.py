@@ -282,6 +282,11 @@ async def chat_profile(current_user: cl.User):
             icon="/public/lifecycle.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
         ),
         cl.ChatProfile(
+            name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
+            markdown_description="Refine existing content for Riyadh Air.",
+            icon="/public/user_circle.svg"
+        ),
+        cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
             icon="/public/refine.svg",
@@ -292,11 +297,6 @@ async def chat_profile(current_user: cl.User):
                     icon="/public/help.svg",
                 ),
             ]
-        ),
-        cl.ChatProfile(
-            name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
-            markdown_description="Refine existing content for Riyadh Air.",
-            icon="/public/user_circle.svg"
         )
     ]
 
@@ -539,23 +539,21 @@ async def on_submit_social_media_selections(action):
         
     
         await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
-        rx_social_media_creator = cl.user_session.get("rx_social_media_creator")
+        rx_social_media_create = cl.user_session.get("rx_social_media_creator")
         chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
         
         query = {
             "chat_history": chat_history_social_media_creator,
             "input": filled_prompt
         }
-        config = {"configurable": {"thread_id": "rx_contentgen"}}
         msg_contentgen = cl.Message(content="", author="Riyadh Air AI Web Research")
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 full_msg = ""
-                async for chunk in rx_social_media_creator.astream(
-                    query,
-                    config=config
+                async for chunk in rx_social_media_create.astream(
+                    query
                 ):
                     await msg_contentgen.stream_token(chunk)
                     full_msg += chunk
@@ -683,7 +681,7 @@ async def on_message(message: cl.Message):
                 logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
     
     elif chat_profile == "Social Media Content Creation":
-        rx_social_media_creator = cl.user_session.get("rx_social_media_creator")
+        rx_social_media_create = cl.user_session.get("rx_social_media_creator")
         chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
         if len(chat_history_social_media_creator) == 0:
             await cl.Message(content="Please start a new chat to generate content.").send()
@@ -697,7 +695,7 @@ async def on_message(message: cl.Message):
         for attempt in range(max_retries):
             try:
                 full_msg = ""
-                async for chunk in rx_social_media_creator.astream(
+                async for chunk in rx_social_media_create.astream(
                     query,
                     config=config
                 ):

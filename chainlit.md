@@ -21,3 +21,8 @@ This document tracks the version history of the AI Content Gen App
 - **Notes:**
     - Added lifecycle content creation tool that targets emails, SMS and push notifications.
     - Redesigned the guided flow completely in the UI with a custom developed form-like structure, with dynamic sub-questions rendering upon selection of options.
+
+## v0.4 - Social Media Content Tool
+- **Release Date:** 2025-03-27
+- **Notes:**
+    - Added social media content creation tool that targets 7 different social media platforms.

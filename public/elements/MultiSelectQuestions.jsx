@@ -22,12 +22,26 @@ export default function MultiSelectQuestions() {
 
   // Determine which action to call based on tool type
   // Check if any questions exist and look for toolType property on the first question
-  const isLifecycleForm = initialQuestions.length > 0 && 
-    initialQuestions[0].toolType === "lifecycle";
+  // Determine which tool type we're working with
+  const toolType = initialQuestions.length > 0 ? 
+    initialQuestions[0].toolType : null;
   
-  // Set the action name based on the form type
-  const submitActionName = isLifecycleForm ? 
-    "submit_lifecycle_selections" : "submit_selections";
+  // Set the action name based on the tool type
+  const submitActionName = (() => {
+    switch(toolType) {
+      case "lifecycle":
+        return "submit_lifecycle_selections";
+      case "social_media":
+        return "submit_social_media_selections";
+      case "web_app":
+      default:
+        return "submit_selections";
+    }
+  })();
+  
+  // Flag to determine if we're using the lifecycle form logic
+  const isLifecycleForm = toolType === "lifecycle";
+  const isSocialMediaForm = toolType === "social_media";
 
   // Update selections and dynamically adjust visible questions
   const handleSelectChange = (questionId, value) => {
@@ -54,7 +68,7 @@ export default function MultiSelectQuestions() {
     }
     
     // For lifecycle form, handle sub-questions
-    if (isLifecycleForm) {
+    if (isLifecycleForm || isSocialMediaForm) {
       // Find the current question
       const currentQuestion = initialQuestions.find(q => q.questionId === questionId);
       
