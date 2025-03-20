@@ -22,9 +22,9 @@ USER_INPUT_LIFECYCLE = {
         "     - **Push Structure**: {push_structure}",
         "     - **SMS Structure**: {sms_structure}",
         "     - **Other Structure**: {other_structure}",
-        "2. **Who is the intended recipient?**: {target_audience}",
-        "3. **What is the main objective of this content?**: {content_purpose}",
-        "4. **Additional instructions or details to include?**: {additional_instructions}"
+        "2. **Intended Recipient**: {target_audience}",
+        "3. **Main Objective of this content**: {content_purpose}",
+        "4. **Additional context or instructions**: {additional_instructions}",
     ]
 }
 
@@ -40,7 +40,7 @@ USER_SELECTION_MSG_LIFECYCLE = {
         "     - **Other Structure**: {other_structure}",
         "2. **Intended Recipient**: {target_audience}",
         "3. **Main Objective of this content**: {content_purpose}",
-        "4. **Additional Instructions**: {additional_instructions}",
+        "4. **Additional context or instructions**: {additional_instructions}",
         "\nWould you like to proceed with these selections?"
     ]
 }

@@ -16,7 +16,8 @@ USER_INPUT_SOCIAL_MEDIA = {
       "5. **Featured Destinations/Services**: {featured_services}",
       "6. **Themes/Campaigns**: {content_themes}",
       "7. **Calls to Action (CTAs)**: {ctas}",
-      "8. **Hashtags**: {hashtags}"
+      "8. **Hashtags**: {hashtags}",
+      "9. **Additional context or instructions**: {additional_instructions}",
     ]
 }
 
@@ -31,6 +32,7 @@ USER_SELECTION_SOCIAL_MEDIA = {
       "6. **Themes/Campaigns**: {content_themes}",
       "7. **Calls to Action (CTAs)**: {ctas}",
       "8. **Hashtags**: {hashtags}",
+      "9. **Additional context or instructions**: {additional_instructions}",
       "Would you like to proceed with this selection?"
     ]
   }

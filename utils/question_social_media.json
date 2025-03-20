@@ -204,6 +204,13 @@
         "type": "text",
         "abbrev": "hashtags",
         "mandatory": false
+      },
+      {
+        "question": "Additional context or instructions for the model: (If any)",
+        "type": "text",
+        "value": ["Yes, add additional info"],
+        "abbrev": "additional_instructions",
+        "mandatory": false
       }
     ]
   }

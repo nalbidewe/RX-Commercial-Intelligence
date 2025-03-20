@@ -164,7 +164,7 @@
       "mandatory": true
     },
     {
-      "question": "Do you have any additional instructions or details to include?",
+      "question": "Additional context or instructions for the model: (If any)",
       "type": "text",
       "value": ["Yes, add additional info"],
       "abbrev": "additional_instructions",

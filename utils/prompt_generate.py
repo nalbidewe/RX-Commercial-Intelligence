@@ -7,6 +7,7 @@ USER_INPUT = {
         "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
+        "7. **Additional context or instructions**: {additional_instructions}",
     ]
 }
 USER_SELECTION_MSG = {
@@ -18,6 +19,7 @@ USER_SELECTION_MSG = {
         "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
+        "7. **Additional context or instructions**: {additional_instructions}",
         "Would you like to proceed with this selection?"
                 ]
 }

@@ -281,11 +281,11 @@ async def chat_profile(current_user: cl.User):
             markdown_description="Generate Lifecycle content for Riyadh Air.",
             icon="/public/lifecycle.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
         ),
-        cl.ChatProfile(
-            name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
-            markdown_description="Refine existing content for Riyadh Air.",
-            icon="/public/user_circle.svg"
-        ),
+        # cl.ChatProfile(
+        #     name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
+        #     markdown_description="Refine existing content for Riyadh Air.",
+        #     icon="/public/user_circle.svg"
+        # ),
         cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
