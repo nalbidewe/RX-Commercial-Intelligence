@@ -702,8 +702,8 @@ async def on_message(message: cl.Message):
                     await msg_contentgen.stream_token(chunk)
                     full_msg += chunk
 
-                chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
-                chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
+                chat_history_social_media_creator.append(HumanMessage(content=user_msg))
+                chat_history_social_media_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
                 await msg_contentgen.send()
                 return
