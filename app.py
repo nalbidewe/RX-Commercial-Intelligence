@@ -4,6 +4,8 @@ import re
 import json
 import logging
 import uuid
+import base64
+import io
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -184,6 +186,39 @@ def load_questions(filename="utils/questions_generate_webapp.json"):
     
     return questions
 
+def extract_text_from_file_data(file_data):
+    """
+    Extract text from attached file data in base64 format.
+    
+    Args:
+        file_data (dict): Dictionary containing file content and type
+        
+    Returns:
+        str: Extracted text from the file
+    """
+    file_content = file_data["content"]
+    file_type = file_data["type"]
+    
+    # Remove the data URL prefix
+    content_parts = file_content.split(',', 1)
+    if len(content_parts) > 1:
+        base64_content = content_parts[1]
+    else:
+        base64_content = content_parts[0]
+    
+    # Decode base64 content
+    decoded_content = base64.b64decode(base64_content)
+    file_buffer = io.BytesIO(decoded_content)
+    
+    # Extract text based on file type
+    extracted_text = ""
+    if "pdf" in file_type.lower():
+        extracted_text = read_pdf(file_buffer)
+    elif "docx" in file_type.lower() or "document" in file_type.lower():
+        extracted_text = read_docx(file_buffer)
+        
+    return extracted_text
+
 @cl.cache
 def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
     
@@ -279,10 +314,10 @@ async def chat_profile(current_user: cl.User):
          cl.ChatProfile(
             name="Lifecycle Content Creation",
             markdown_description="Generate Lifecycle content for Riyadh Air.",
-            icon="/public/lifecycle.svg" # cuz h.h doesn't want a symbolic 'lifestyle' butterfly
+            icon="/public/lifecycle.svg"
         ),
         # cl.ChatProfile(
-        #     name="Social Media Content Creation", # 7osam kan yeb3'a h.h mdri lesh
+        #     name="Social Media Content Creation",
         #     markdown_description="Refine existing content for Riyadh Air.",
         #     icon="/public/user_circle.svg"
         # ),
@@ -366,8 +401,7 @@ async def on_chat_start():
         form_msg = cl.Message(content="Please answer the following questions for social media content:", elements=[multi_select_element])
         cl.user_session.set("social_media_form_msg", form_msg)
         await form_msg.send()
-        
-       
+
 @cl.action_callback("submit_selections")
 async def on_submit_selections(action):
     form_msg = cl.user_session.get("form_msg")
@@ -375,12 +409,21 @@ async def on_submit_selections(action):
     # Extract the selections payload and store it for later use.
     selections = action.payload.get("selections", [])
     
+    # Extract files from payload
+    files_data = action.payload.get("files", {})
+    
     # Build a mapping: questionId -> answer (only if answer is non-empty)
     mapping = {}
     for q in selections:
         answer = q.get("selected", "").strip()
         if answer:
             mapping[q["questionId"]] = answer
+            
+            # Process file content if this question has an attached file
+            if q["questionId"] in files_data:
+                extracted_text = extract_text_from_file_data(files_data[q["questionId"]])
+                # Add extracted text to the mapping with a special key
+                mapping[f"{q['questionId']}_content"] = extracted_text
 
     # If no selections were made, inform the user.
     if not mapping:
@@ -420,6 +463,17 @@ async def on_submit_selections(action):
     else:
         filled_prompt = "\n".join(numbered_lines)
     
+    # Add file contents to the prompt if any
+    file_contents = []
+    for key, value in mapping.items():
+        if key.endswith("_content") and value.strip():
+            original_key = key.replace("_content", "")
+            if original_key in mapping:
+                file_contents.append(f"\n--- Content from attached file for '{mapping[original_key]}' ---\n{value}\n")
+    
+    if file_contents:
+        filled_prompt += "\n" + "\n".join(file_contents)
+    
     await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
     rx_content_create = cl.user_session.get("rx_content_creator")
     chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
@@ -452,12 +506,22 @@ async def on_submit_lifecycle_selections(action):
     # Extract the selections payload
     selections = action.payload.get("selections", [])
     
+    # Extract files from payload
+    files_data = action.payload.get("files", {})
+    
     # Build a mapping of answers
     user_responses = {}
+    file_contents = []
+    
     for q in selections:
         answer = q.get("selected", "").strip()
         if answer:
             user_responses[q["questionId"]] = answer
+            
+            # Process file content if this question has an attached file
+            if q["questionId"] in files_data:
+                extracted_text = extract_text_from_file_data(files_data[q["questionId"]])
+                file_contents.append(f"\n--- Content from attached file for '{answer}' ---\n{extracted_text}\n")
     
     # If no selections were made, inform the user
     if not user_responses:
@@ -467,6 +531,10 @@ async def on_submit_lifecycle_selections(action):
     try:
         # Process the selections to create the prompt
         filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
+        
+        # Add file contents to the prompt if any
+        if file_contents:
+            filled_prompt += "\n" + "\n".join(file_contents)
         
         cl.user_session.set("filled_prompt", filled_prompt)
         
@@ -519,12 +587,22 @@ async def on_submit_social_media_selections(action):
     # Extract the selections payload
     selections = action.payload.get("selections", [])
     
+    # Extract files from payload
+    files_data = action.payload.get("files", {})
+    
     # Build a mapping of answers
     user_responses = {}
+    file_contents = []
+    
     for q in selections:
         answer = q.get("selected", "").strip()
         if answer:
             user_responses[q["questionId"]] = answer
+            
+            # Process file content if this question has an attached file
+            if q["questionId"] in files_data:
+                extracted_text = extract_text_from_file_data(files_data[q["questionId"]])
+                file_contents.append(f"\n--- Content from attached file for '{answer}' ---\n{extracted_text}\n")
     
     # If no selections were made, inform the user
     if not user_responses:
@@ -535,9 +613,12 @@ async def on_submit_social_media_selections(action):
         # Process the selections to create the prompt
         filled_prompt = adjust_template(USER_INPUT_SOCIAL_MEDIA["content_gen_prompt"], user_responses)
         
+        # Add file contents to the prompt if any
+        if file_contents:
+            filled_prompt += "\n" + "\n".join(file_contents)
+        
         cl.user_session.set("filled_prompt", filled_prompt)
         
-    
         await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
         rx_social_media_create = cl.user_session.get("rx_social_media_creator")
         chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")

@@ -25,6 +25,7 @@ USER_INPUT_LIFECYCLE = {
         "2. **Intended Recipient**: {target_audience}",
         "3. **Main Objective of this content**: {content_purpose}",
         "4. **Additional context or instructions**: {additional_instructions}",
+        "5. **Attached document contents**: {attached_document}",
     ]
 }
 
@@ -41,6 +42,7 @@ USER_SELECTION_MSG_LIFECYCLE = {
         "2. **Intended Recipient**: {target_audience}",
         "3. **Main Objective of this content**: {content_purpose}",
         "4. **Additional context or instructions**: {additional_instructions}",
+        "5. **Attached document contents**: {attached_document}",
         "\nWould you like to proceed with these selections?"
     ]
 }

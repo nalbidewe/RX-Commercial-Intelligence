@@ -18,6 +18,7 @@ USER_INPUT_SOCIAL_MEDIA = {
       "7. **Calls to Action (CTAs)**: {ctas}",
       "8. **Hashtags**: {hashtags}",
       "9. **Additional context or instructions**: {additional_instructions}",
+      "10. **Attached document contents**: {attached_document}",
     ]
 }
 
@@ -33,6 +34,7 @@ USER_SELECTION_SOCIAL_MEDIA = {
       "7. **Calls to Action (CTAs)**: {ctas}",
       "8. **Hashtags**: {hashtags}",
       "9. **Additional context or instructions**: {additional_instructions}",
+      "10. **Attached document contents**: {attached_document}",
       "Would you like to proceed with this selection?"
     ]
   }
