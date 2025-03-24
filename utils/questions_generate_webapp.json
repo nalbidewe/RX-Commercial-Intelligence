@@ -73,5 +73,17 @@
         ],
         "abbrev": "content_length",
         "mandatory": true
+    },
+    "Additional context or instructions for the model: (If any)": {
+        "type": "text",
+        "value": ["Yes, add additional info"],
+        "abbrev": "additional_instructions",
+        "mandatory": false
+    },
+    "Would you like to attach a supporting document? (If any)": {
+        "type": "attachment",
+        "value": ["Yes, add additional info"],
+        "abbrev": "attached_document",
+        "mandatory": false
     }
 }
