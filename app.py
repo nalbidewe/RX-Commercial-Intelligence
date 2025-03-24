@@ -463,6 +463,7 @@ async def on_submit_selections(action):
     else:
         filled_prompt = "\n".join(numbered_lines)
     
+    await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
     # Add file contents to the prompt if any
     file_contents = []
     for key, value in mapping.items():
@@ -474,7 +475,6 @@ async def on_submit_selections(action):
     if file_contents:
         filled_prompt += "\n" + "\n".join(file_contents)
     
-    await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
     rx_content_create = cl.user_session.get("rx_content_creator")
     chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
     max_retries = 3
@@ -532,6 +532,7 @@ async def on_submit_lifecycle_selections(action):
         # Process the selections to create the prompt
         filled_prompt = adjust_template(USER_INPUT_LIFECYCLE["content_gen_prompt"], user_responses)
         
+        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
         # Add file contents to the prompt if any
         if file_contents:
             filled_prompt += "\n" + "\n".join(file_contents)
@@ -545,8 +546,6 @@ async def on_submit_lifecycle_selections(action):
             prompt_email_template = f"\nEmail Template for {user_responses.get('content_purpose', '')}"
             prompt_email_template += "\n\n" + email_template
         
-        
-        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
         rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
         chat_history_lifecycle_creator = cl.user_session.get("chat_history_lifecycle_creator")
         
@@ -612,6 +611,7 @@ async def on_submit_social_media_selections(action):
     try:
         # Process the selections to create the prompt
         filled_prompt = adjust_template(USER_INPUT_SOCIAL_MEDIA["content_gen_prompt"], user_responses)
+        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
         
         # Add file contents to the prompt if any
         if file_contents:
@@ -619,7 +619,6 @@ async def on_submit_social_media_selections(action):
         
         cl.user_session.set("filled_prompt", filled_prompt)
         
-        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send()
         rx_social_media_create = cl.user_session.get("rx_social_media_creator")
         chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
         
