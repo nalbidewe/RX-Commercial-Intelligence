@@ -36,6 +36,7 @@ from utils.prompt_generate_lifecycle import (
     SYSTEM_LIFECYCLE_PROMPT, 
     EMAIL_TEMPLATE
 )
+from utils.prompt_rx_policy import RX_POLICY_SYS_MSG, welcome_message
 
 
 # Configure logging
@@ -286,6 +287,20 @@ def rx_social_media_creator(sys_msg: str = SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache
+def rx_policy_gen(sys_msg: str = RX_POLICY_SYS_MSG):
+    """Generate a policy generation chain with prompt, LLM, and output parser."""
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
+    output_parser = StrOutputParser()
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """Authenticate user based on credentials stored in MongoDB."""
@@ -320,6 +335,11 @@ async def chat_profile(current_user: cl.User):
         #     name="Social Media Content Creation",
         #     markdown_description="Refine existing content for Riyadh Air.",
         #     icon="/public/user_circle.svg"
+        # ),
+        # cl.ChatProfile(
+        #     name="RX Policy Generation",
+        #     markdown_description="Generate policy documents for Riyadh Air.",
+        #     icon="/public/policy.svg"
         # ),
         cl.ChatProfile(
             name="Content Refinement",
@@ -401,6 +421,21 @@ async def on_chat_start():
         form_msg = cl.Message(content="Please answer the following questions for social media content:", elements=[multi_select_element])
         cl.user_session.set("social_media_form_msg", form_msg)
         await form_msg.send()
+    
+    elif chat_profile == "RX Policy Generation":
+        cl.user_session.set("welcome_msg_removed", False)
+        logging.info('started loading')
+        
+        chat_history = []
+        cl.user_session.set("chat_history", chat_history)
+        
+        rx_policy = rx_policy_gen()
+        logging.info('models loaded')
+        cl.user_session.set("rx_policy", rx_policy)
+
+        welcome_msg = cl.Message(content=welcome_message, author="Riyadh Air AI Policy Generator")
+        cl.user_session.set("welcome_msg", welcome_msg)
+        await welcome_msg.send()
 
 @cl.action_callback("submit_selections")
 async def on_submit_selections(action):
@@ -786,6 +821,57 @@ async def on_message(message: cl.Message):
                 chat_history_social_media_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
                 await msg_contentgen.send()
+                return
+
+            except Exception as e:
+                logging.error(f"Error faced while running the agent. Error: {e}... Retrying attempt {attempt}....")
+
+    elif chat_profile == "RX Policy Generation":
+        
+        if message.elements:
+            if message.elements[0].name.endswith('.docx'):
+                file_element = message.elements[0]
+                path = file_element.path
+                doc_content = read_docx(path)
+                user_msg = (
+                        f"{user_msg}:\n\nThe following is content from an attached word document, use it to "
+                        f"supplement your answer:\n\n{doc_content}")
+            elif message.elements[0].name.endswith('.pdf'):
+                file_element = message.elements[0]
+                path = file_element.path
+                doc_content = read_pdf(path)
+                user_msg = (
+                        f"{user_msg}:\n\nThe following is content from an attached PDF document, use it to "
+                        f"supplement your answer:\n\n{doc_content}")
+
+        chat_history = cl.user_session.get("chat_history")
+        welcome_msg = cl.user_session.get("welcome_msg")
+        
+        if not cl.user_session.get("welcome_msg_removed"):
+            await welcome_msg.remove()
+            cl.user_session.set("welcome_msg_removed", True)
+
+        rx_policy = cl.user_session.get("rx_policy")
+        query = {"chat_history": chat_history, "input": user_msg}
+        msg = cl.Message(content="", author="Riyadh Air AI Policy Generator")
+        config = {"configurable": {"thread_id": message.thread_id}}
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                async with cl.Step("Riyadh Air AI Policy Generator", show_input=False) as step:
+                    step.input = user_msg
+                    async for chunk in rx_policy.astream(
+                        query,
+                        config=config
+                    ):
+                        await msg.stream_token(chunk)
+                        full_msg += chunk
+
+                    chat_history.append(HumanMessage(content=user_msg))
+                    chat_history.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history", chat_history)
+                await msg.send()
                 return
 
             except Exception as e:
