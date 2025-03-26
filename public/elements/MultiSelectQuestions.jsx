@@ -28,28 +28,11 @@ export default function MultiSelectQuestions() {
     })));
   }, []);
 
-  // Determine which action to call based on tool type
-  // Check if any questions exist and look for toolType property on the first question
-  // Determine which tool type we're working with
-  const toolType = initialQuestions.length > 0 ? 
-    initialQuestions[0].toolType : null;
+  // Get action name from props or use default
+  const submitActionName = props.submitActionName || "submit_selections";
   
-  // Set the action name based on the tool type
-  const submitActionName = (() => {
-    switch(toolType) {
-      case "lifecycle":
-        return "submit_lifecycle_selections";
-      case "social_media":
-        return "submit_social_media_selections";
-      case "web_app":
-      default:
-        return "submit_selections";
-    }
-  })();
-  
-  // Flag to determine if we're using the lifecycle form logic
-  const isLifecycleForm = toolType === "lifecycle";
-  const isSocialMediaForm = toolType === "social_media";
+  // Get hierarchy flag from props or default to false
+  const enableHierarchy = props.enableHierarchy || false;
 
   // Handle file upload
   const handleFileUpload = async (questionId, file) => {
@@ -157,8 +140,8 @@ export default function MultiSelectQuestions() {
       };
     }
     
-    // For lifecycle form, handle sub-questions
-    if (isLifecycleForm || isSocialMediaForm) {
+    // Handle hierarchical questions if enabled
+    if (enableHierarchy) {
       // Find the current question
       const currentQuestion = initialQuestions.find(q => q.questionId === questionId);
       
@@ -218,7 +201,7 @@ export default function MultiSelectQuestions() {
       
       setVisibleQuestions(filteredQuestions);
     } else {
-      // For non-lifecycle forms, just update the question
+      // For non-hierarchical forms, just update the question
       setVisibleQuestions(updatedQuestions);
     }
   };

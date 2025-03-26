@@ -148,43 +148,61 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
     return len(encoding.encode(text))
 
 def load_questions(filename="utils/questions_generate_webapp.json"):
-    # Load questions from the JSON file.
-    with open(filename, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    """Loads questions from a JSON file into the format expected by the frontend."""
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Question file not found: {filename}")
+        return []
+    except json.JSONDecodeError:
+        logging.error(f"Error decoding JSON from file: {filename}")
+        return []
+
+    questions = []
     
-    # Get the tool type, defaulting to "web_app" if not specified
-    tool_type = data.get("tool_type", "web_app")
-        
-    # Handle different JSON structures
-    if "questions" in data:  # Lifecycle questions format
-        questions = []
+    # Check for the structure used in lifecycle/social_media JSONs
+    if "questions" in data and isinstance(data["questions"], list):
         for details in data["questions"]:
-            options = details.get("value", [])
-            if isinstance(options, list):
-                questions.append({
-                    "questionId": details.get("abbrev", ""),
-                    "question": details.get("question", ""),
-                    "type": details.get("type", "options"),
-                    "options": options,
-                    "selected": "",
-                    "isOther": False,
-                    "subQuestions": details.get("sub_questions", {}),
-                    "toolType": tool_type  # Ensure consistent casing
-                })
-    else:  # Web & App content format
-        questions = []
-        for question_text, details in data.items():
-            if question_text != "tool_type":  # Skip the tool_type entry
-                questions.append({
-                    "questionId": details.get("abbrev", ""),
-                    "question": question_text,
-                    "type": details["type"],
-                    "options": details["value"],
-                    "selected": "",
-                    "isOther": False,
-                    "toolType": tool_type  # Ensure consistent casing
-                })
-    
+            # Ensure mandatory fields exist or provide defaults
+            question_id = details.get("questionId", details.get("abbrev")) # Use questionId or fallback to abbrev
+            if not question_id:
+                 logging.warning(f"Skipping question due to missing 'questionId' or 'abbrev' in {filename}: {details.get('question')}")
+                 continue
+                 
+            questions.append({
+                "questionId": question_id,
+                "question": details.get("question", ""),
+                "type": details.get("type", "options"), # Default to options if missing
+                "options": details.get("value", []),
+                "selected": "", # Initialize frontend state fields
+                "isOther": False, # Initialize frontend state fields
+                "subQuestions": details.get("sub_questions", {})
+                # Removed toolType assignment
+            })
+    # Check for the structure used in web_app JSON
+    elif isinstance(data, dict):
+        # Filter out non-question keys like 'tool_type' if they still exist
+        question_items = {k: v for k, v in data.items() if isinstance(v, dict) and ("type" in v or "abbrev" in v)}
+        for question_text, details in question_items.items():
+            question_id = details.get("questionId", details.get("abbrev")) # Use questionId or fallback to abbrev
+            if not question_id:
+                 logging.warning(f"Skipping question due to missing 'questionId' or 'abbrev' in {filename}: {question_text}")
+                 continue
+                 
+            questions.append({
+                "questionId": question_id,
+                "question": question_text, # The key is the question text in this format
+                "type": details.get("type", "options"),
+                "options": details.get("value", []),
+                "selected": "", # Initialize frontend state fields
+                "isOther": False, # Initialize frontend state fields
+                "subQuestions": details.get("sub_questions", {}) # Handle potential subquestions even in this format
+                 # Removed toolType assignment
+            })
+    else:
+        logging.error(f"Unknown JSON structure in file: {filename}")
+
     return questions
 
 def extract_text_from_file_data(file_data):
@@ -368,71 +386,83 @@ def adjust_template(template_lines, responses):
 @cl.on_chat_start
 async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
+
+    # --- Web & App Content Creation ---
     if chat_profile == "Web & App Content Creation":
         rx_content_create = rx_content_creator()
         cl.user_session.set("rx_content_creator", rx_content_create)
-        chat_history_content_creator = []
-        cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-        # Dynamically load questions from the JSON file.
-        questions = load_questions()
-        # Create the custom element with the questions.
+        cl.user_session.set("chat_history_content_creator", [])
+        
+        questions = load_questions("utils/questions_generate_webapp.json") # Specify file
+        
+        # *** Pass submitActionName and enableHierarchy ***
         multi_select_element = cl.CustomElement(
             name="MultiSelectQuestions",
-            props={"questions": questions}
+            props={
+                "questions": questions,
+                "submitActionName": "submit_selections", # Action for this profile
+                "enableHierarchy": False                # No hierarchy for this profile
+            }
         )
         form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
         cl.user_session.set("form_msg", form_msg)
         await form_msg.send()
-    
+
+    # --- Content Refinement ---
     elif chat_profile == "Content Refinement":
         rx_copywrite = rx_copywriter()
         cl.user_session.set("rx_copywriter", rx_copywrite)
-        chat_history_copywriter = []
-        cl.user_session.set("chat_history_copywriter", chat_history_copywriter)
-    
+        cl.user_session.set("chat_history_copywriter", [])
+        # No form needed for this profile based on original code
+
+    # --- Lifecycle Content Creation ---
     elif chat_profile == "Lifecycle Content Creation":
-        questions = load_questions("utils/question_generate_lifecycle.json")
         rx_lifecycle_create = rx_lifecycle_creator()
         cl.user_session.set("rx_lifecycle_creator", rx_lifecycle_create)
-        chat_history_lifecycle_creator = []
-        cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
+        cl.user_session.set("chat_history_lifecycle_creator", [])
+
+        questions = load_questions("utils/question_generate_lifecycle.json") # Specify file
         
-        # Create the custom element with the questions
+        # *** Pass submitActionName and enableHierarchy ***
         multi_select_element = cl.CustomElement(
             name="MultiSelectQuestions",
-            props={"questions": questions}
+            props={
+                "questions": questions,
+                "submitActionName": "submit_lifecycle_selections", # Action for this profile
+                "enableHierarchy": True                           # Hierarchy enabled
+            }
         )
         form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
         cl.user_session.set("lifecycle_form_msg", form_msg)
         await form_msg.send()
 
+    # --- Social Media Content Creation ---
     elif chat_profile == "Social Media Content Creation":
-        questions = load_questions("utils/question_social_media.json")
         rx_social_media_create = rx_social_media_creator()
         cl.user_session.set("rx_social_media_creator", rx_social_media_create)
-        chat_history_social_media_creator = []
-        cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
+        cl.user_session.set("chat_history_social_media_creator", [])
         
-        # Create the custom element with the questions
+        questions = load_questions("utils/question_social_media.json") # Specify file
+        
+        # *** Pass submitActionName and enableHierarchy ***
         multi_select_element = cl.CustomElement(
             name="MultiSelectQuestions",
-            props={"questions": questions}
+            props={
+                "questions": questions,
+                "submitActionName": "submit_social_media_selections", # Action for this profile
+                "enableHierarchy": True                              # Hierarchy enabled
+            }
         )
         form_msg = cl.Message(content="Please answer the following questions for social media content:", elements=[multi_select_element])
         cl.user_session.set("social_media_form_msg", form_msg)
         await form_msg.send()
-    
+
+    # --- RX Policy Generation ---
     elif chat_profile == "RX Policy Generation":
         cl.user_session.set("welcome_msg_removed", False)
-        logging.info('started loading')
-        
-        chat_history = []
-        cl.user_session.set("chat_history", chat_history)
-        
+        cl.user_session.set("chat_history", [])
         rx_policy = rx_policy_gen()
-        logging.info('models loaded')
         cl.user_session.set("rx_policy", rx_policy)
-
         welcome_msg = cl.Message(content=welcome_message, author="Riyadh Air AI Policy Generator")
         cl.user_session.set("welcome_msg", welcome_msg)
         await welcome_msg.send()
