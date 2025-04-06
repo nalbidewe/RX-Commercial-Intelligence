@@ -26,3 +26,5 @@ This document tracks the version history of the AI Content Gen App
 - **Release Date:** 2025-03-24
 - **Notes:**
     - Implemented file upload/attachment feature across all tools allowing users to upload supporting documents (PDF or DOCX only) to enhance model context.
+
+## v0.5
