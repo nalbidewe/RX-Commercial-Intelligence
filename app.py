@@ -485,16 +485,16 @@ def rx_policy_gen(sys_msg: str = RX_POLICY_SYS_MSG):
     return chain
 
 @cl.cache # Cache the initialized chain
-def rx_arabic_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
+def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     """
     Initializes and returns a Langchain Runnable sequence (chain) for
-    content refinement (copywriting).
+    content translator.
 
     Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for refinement tasks.
 
     Args:
         sys_msg (str): The system prompt to configure the LLM. Defaults to
-                       REFINE_SYS_PROMPT from utils.
+                       ARABIC_TRANSLATION_SYS_PROMPT from utils.
 
     Returns:
         Runnable: The initialized Langchain chain.
@@ -599,7 +599,7 @@ async def chat_profile(current_user: cl.User):
         ),
 
         cl.ChatProfile(
-            name="Arabic Translation Tool",
+            name="Content Translation",
             markdown_description="Translate existing Riyadh Air content to arabic.",
             icon="/public/translator.svg",
             # Define starter prompts for this profile
@@ -757,12 +757,12 @@ async def on_chat_start():
         # Send the welcome message
         await welcome_msg.send()
 
-    elif chat_profile == "Arabic Translation Tool":
+    elif chat_profile == "Content Translation":
         # Initialize or retrieve the cached chain
-        rx_copywrite = rx_arabic_translator()
+        rx_translator = rx_translator()
         # Store the chain and an empty chat history
-        cl.user_session.set("rx_arabic_translator", rx_copywrite)
-        cl.user_session.set("chat_history_arabic_translation", []) # Initialize history
+        cl.user_session.set("rx_translator", rx_translator)
+        cl.user_session.set("chat_history_translator", []) # Initialize history
         # No initial form is sent for this profile
 
 
@@ -1265,25 +1265,11 @@ async def on_message(message: cl.Message):
                 # await cl.sleep(1)
     
     # --- Arabic Content Translation Interaction ---
-    elif chat_profile == "Arabic Translation Tool":
-        rx_arabic_translator = cl.user_session.get("rx_arabic_translator")
-        arabic_chat_history_copywriter = cl.user_session.get("chat_history_arabic_translation")
+    elif chat_profile == "Content Translation":
+        rx_translator = cl.user_session.get("rx_translator")
+        chat_history_translator = cl.user_session.get("chat_history_translator")
         config = {"configurable": {"thread_id": message.thread_id}}
 
-        # Check if the message has attachments but empty/whitespace text
-        has_file = bool(message.elements)
-        message_is_empty = not user_msg or user_msg.isspace()
-        
-        # If there's a file but no message, create a default translation prompt
-        if has_file and message_is_empty:
-            user_msg = "Please translate the following content to Arabic:"
-            logging.info("File-only upload detected for Arabic Translation Tool - using default prompt")
-        
-        # Validate that we have either a message or a file to process
-        if not has_file and message_is_empty:
-            await cl.Message(content="Please provide text to translate or upload a file.").send()
-            return
-    
         # Check for file attachments in the message
         if message.elements:
             # Assuming only one file attachment is handled per message here
@@ -1302,7 +1288,7 @@ async def on_message(message: cl.Message):
                         file_type_desc = "PDF document"
                     else:
                         file_type_desc = "attached file" # Generic fallback
-                        logging.warning(f"Received unsupported file type in Content Refinement: {file_name}")
+                        logging.warning(f"Received unsupported file type in Content Translation: {file_name}")
 
                 # If text was extracted, prepend it to the user message
                 if extracted_doc_content:
@@ -1311,7 +1297,7 @@ async def on_message(message: cl.Message):
                         f"{extracted_doc_content}\n"
                         f"--- End of attached content ---"
                     )
-                    logging.info(f"Added content from attached file '{file_name}' to refinement prompt.")
+                    logging.info(f"Added content from attached file '{file_name}' to translate prompt.")
                 else:
                      logging.warning(f"Could not extract text from attached file: {file_name}")
                      # Optionally inform the user:
@@ -1321,36 +1307,36 @@ async def on_message(message: cl.Message):
                  logging.error(f"File not found at path provided by Chainlit: {file_path}")
                  await cl.Message(content=f"Error accessing the attached file: {file_name}. Please try attaching it again.").send()
             except Exception as e:
-                 logging.error(f"Error processing attached file '{file_name}' in Content Refinement: {e}")
+                 logging.error(f"Error processing attached file '{file_name}' in Content Translator: {e}")
                  await cl.Message(content=f"Error processing the attached file: {file_name}. Please try again.").send()
 
 
         # Prepare query and message for streaming
-        query = {"chat_history": arabic_chat_history_copywriter, "input": user_msg}
-        msg_copywriter = cl.Message(content="", author="Riyadh Air")
+        query = {"chat_history": chat_history_translator, "input": user_msg}
+        msg_translator = cl.Message(content="", author="Riyadh Air")
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 full_msg = ""
                 # Stream response
-                async for chunk in rx_arabic_translator.astream(query, config=config):
-                    await msg_copywriter.stream_token(chunk)
+                async for chunk in rx_translator.astream(query, config=config):
+                    await msg_translator.stream_token(chunk)
                     full_msg += chunk
 
                 # Update history
-                arabic_chat_history_copywriter.append(HumanMessage(content=user_msg)) # User message potentially includes file content
-                arabic_chat_history_copywriter.append(AIMessage(content=full_msg))
-                cl.user_session.set("chat_history_arabic_translation", arabic_chat_history_copywriter)
+                chat_history_translator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
+                chat_history_translator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_translator", chat_history_translator)
 
-                await msg_copywriter.send()
-                logging.info("Successfully generated and streamed response for Content Refinement.")
+                await msg_translator.send()
+                logging.info("Successfully generated and streamed response for Content Translator.")
                 return # Exit on success
 
             except Exception as e:
-                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Content Refinement: {e}")
+                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Content Translator: {e}")
                 if attempt == max_retries - 1:
-                    await msg_copywriter.update(content=f"Sorry, I encountered an error after {max_retries} attempts refining content. Please try again later.")
+                    await msg_translator.update(content=f"Sorry, I encountered an error after {max_retries} attempts to translate content. Please try again later.")
                 # await cl.sleep(1)
 
     # --- Lifecycle Content Creation Follow-up ---
