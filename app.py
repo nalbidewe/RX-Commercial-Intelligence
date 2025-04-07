@@ -759,9 +759,9 @@ async def on_chat_start():
 
     elif chat_profile == "Content Translation":
         # Initialize or retrieve the cached chain
-        rx_translator = rx_translator()
+        rx_translation = rx_translator()
         # Store the chain and an empty chat history
-        cl.user_session.set("rx_translator", rx_translator)
+        cl.user_session.set("rx_translation", rx_translation)
         cl.user_session.set("chat_history_translator", []) # Initialize history
         # No initial form is sent for this profile
 
@@ -1266,7 +1266,7 @@ async def on_message(message: cl.Message):
     
     # --- Arabic Content Translation Interaction ---
     elif chat_profile == "Content Translation":
-        rx_translator = cl.user_session.get("rx_translator")
+        rx_translation = cl.user_session.get("rx_translation")
         chat_history_translator = cl.user_session.get("chat_history_translator")
         config = {"configurable": {"thread_id": message.thread_id}}
 
@@ -1320,7 +1320,7 @@ async def on_message(message: cl.Message):
             try:
                 full_msg = ""
                 # Stream response
-                async for chunk in rx_translator.astream(query, config=config):
+                async for chunk in rx_translation.astream(query, config=config):
                     await msg_translator.stream_token(chunk)
                     full_msg += chunk
 
