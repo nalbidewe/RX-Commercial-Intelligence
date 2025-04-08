@@ -21,17 +21,10 @@ export default function MultiSelectQuestions() {
   // Initialize visible questions with the top-level questions
   useEffect(() => {
     setVisibleQuestions(initialQuestions.map(q => ({
-      questionId: q.questionId || q.abbrev,
-      question: q.question,
-      type: q.type || "options",
-      options: q.options || q.value || [],
-      selected: "",
-      isOther: false,
-      subQuestions: q.subQuestions || q.sub_questions || {},
+      ...q,
       level: 0,
       parentId: null,
-      parentValue: null,
-      mandatory: q.mandatory || false
+      parentValue: null
     })));
   }, []);
 
@@ -123,43 +116,9 @@ export default function MultiSelectQuestions() {
     });
   };
 
-  // Find a question in the question structure (including sub-questions) by ID
-  const findQuestionById = (questions, id) => {
-    // First check directly in the array
-    const directMatch = questions.find(q => q.questionId === id || q.abbrev === id);
-    if (directMatch) return directMatch;
-    
-    // Then check in sub-questions/subQuestions
-    for (const q of questions) {
-      const subQsMap = q.subQuestions || q.sub_questions || {};
-      
-      for (const [answerValue, subQs] of Object.entries(subQsMap)) {
-        if (!Array.isArray(subQs)) continue;
-        
-        // Look for the question in this sub-questions array
-        const subMatch = subQs.find(sq => sq.questionId === id || sq.abbrev === id);
-        if (subMatch) return subMatch;
-        
-        // Recursively check each sub-question's subQuestions
-        for (const subQ of subQs) {
-          const subSubQsMap = subQ.subQuestions || subQ.sub_questions || {};
-          
-          for (const [subAnsValue, subSubQs] of Object.entries(subSubQsMap)) {
-            if (!Array.isArray(subSubQs)) continue;
-            
-            const subSubMatch = subSubQs.find(ssq => ssq.questionId === id || ssq.abbrev === id);
-            if (subSubMatch) return subSubMatch;
-          }
-        }
-      }
-    }
-    
-    return null;
-  };
-
   // Update selections and dynamically adjust visible questions
   const handleSelectChange = (questionId, value) => {
-    // Find the question that was answered
+    // First, find the question that was answered
     const questionIndex = visibleQuestions.findIndex(q => q.questionId === questionId);
     if (questionIndex === -1) return;
 
@@ -183,12 +142,28 @@ export default function MultiSelectQuestions() {
     
     // Handle hierarchical questions if enabled
     if (enableHierarchy) {
-      // Get the current question and its level
-      const currentQuestion = updatedQuestions[questionIndex];
-      const level = currentQuestion.level || 0;
+      // Find the current question
+      const currentQuestion = initialQuestions.find(q => q.questionId === questionId);
       
-      // Find all children of this question to remove them
+      // Also search in any subQuestions that might be present in visible questions
+      let foundSubQuestion;
+      if (!currentQuestion) {
+        for (const question of visibleQuestions) {
+          if (question.subQuestions && question.subQuestions[question.selected]) {
+            const subQs = question.subQuestions[question.selected];
+            foundSubQuestion = subQs.find(sq => sq.abbrev === questionId);
+            if (foundSubQuestion) break;
+          }
+        }
+      }
+      
+      const targetQuestion = currentQuestion || foundSubQuestion;
+      
+      // Remove any existing sub-questions that depended on the previous answer
+      const level = updatedQuestions[questionIndex].level || 0;
       const questionToRemoveIds = new Set();
+      
+      // Find all child questions to remove (and their children)
       const findChildrenToRemove = (parentId, startIdx = 0) => {
         for (let i = startIdx; i < updatedQuestions.length; i++) {
           const q = updatedQuestions[i];
@@ -205,25 +180,22 @@ export default function MultiSelectQuestions() {
       // Filter out questions that need to be removed
       const filteredQuestions = updatedQuestions.filter(q => !questionToRemoveIds.has(q.questionId));
       
-      // Check if this question has sub-questions for the selected value
-      const subQsMap = currentQuestion.subQuestions || {};
-      if (subQsMap[value] && Array.isArray(subQsMap[value])) {
-        // Transform the sub-questions into the format needed for visible questions
-        const subQuestions = subQsMap[value].map(sq => ({
-          questionId: sq.questionId || sq.abbrev,
+      // Add new sub-questions if this answer has any
+      if (targetQuestion && targetQuestion.subQuestions && targetQuestion.subQuestions[value]) {
+        const subQuestions = targetQuestion.subQuestions[value].map(sq => ({
+          questionId: sq.abbrev,
           question: sq.question,
           type: sq.type || "options",
-          options: sq.options || sq.value || [],
+          options: sq.value || [],
           selected: "",
           isOther: false,
-          subQuestions: sq.subQuestions || sq.sub_questions || {},
+          subQuestions: sq.sub_questions || {},
           level: level + 1,
           parentId: questionId,
-          parentValue: value,
-          mandatory: sq.mandatory || false
+          parentValue: value
         }));
         
-        // Insert the sub-questions immediately after their parent
+        // Insert sub-questions right after their parent question
         filteredQuestions.splice(questionIndex + 1, 0, ...subQuestions);
       }
       
@@ -249,26 +221,14 @@ export default function MultiSelectQuestions() {
   // When the user clicks Submit, send an internal message with the appropriate action
   const handleSubmit = () => {
     // Get answers, filtering out any parent/level info we added
-    const selections = visibleQuestions.map(({ questionId, question, type, options, selected, isOther, mandatory }) => ({
+    const selections = visibleQuestions.map(({ questionId, question, type, options, selected, isOther }) => ({
       questionId, 
       question, 
       type, 
       options, 
       selected, 
-      isOther,
-      mandatory
+      isOther
     }));
-    
-    // Check if all mandatory questions are answered
-    const unansweredMandatory = selections.filter(q => 
-      q.mandatory && (!q.selected || q.selected.trim() === "")
-    );
-    
-    if (unansweredMandatory.length > 0) {
-      // Alert the user about unanswered mandatory questions
-      alert(`Please answer all required questions before submitting.`);
-      return;
-    }
     
     // Include file data in the payload
     callAction({
@@ -290,7 +250,7 @@ export default function MultiSelectQuestions() {
         >
           <div className="mb-2 font-medium">
             {q.level > 0 && <span className="text-blue-600">↳ </span>}
-            {q.question} {q.mandatory && <span className="text-red-500">*</span>}
+            {q.question}
           </div>
           {q.type === "options" ? (
             <Select
