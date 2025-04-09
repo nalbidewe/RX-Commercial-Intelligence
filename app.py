@@ -32,6 +32,7 @@ from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
+from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     USER_SELECTION_MSG_LIFECYCLE,
@@ -463,6 +464,39 @@ def rx_policy_gen(sys_msg: str = RX_POLICY_SYS_MSG):
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache # Cache the initialized chain
+def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
+    """
+    Initializes and returns a Langchain Runnable sequence (chain) for
+    content translator.
+
+    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for refinement tasks.
+
+    Args:
+        sys_msg (str): The system prompt to configure the LLM. Defaults to
+                       ARABIC_TRANSLATION_SYS_PROMPT from utils.
+
+    Returns:
+        Runnable: The initialized Langchain chain.
+    """
+    # Define the prompt template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    # Initialize the Azure OpenAI chat model
+    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
+                           temperature=0, # Low temperature for more deterministic refinement
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
+    # Use a simple string output parser
+    output_parser = StrOutputParser()
+    # Combine into a chain
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """
@@ -529,6 +563,20 @@ async def chat_profile(current_user: cl.User):
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
             icon="/public/refine.svg",
+            # Define starter prompts for this profile
+            starters=[
+                cl.Starter(
+                    label="Usage Instructions",
+                    message="How can I use this tool?",
+                    icon="/public/help.svg",
+                ),
+            ]
+        ),
+
+        cl.ChatProfile(
+            name="Content Translation",
+            markdown_description="Translate existing Riyadh Air content to arabic.",
+            icon="/public/translator.svg",
             # Define starter prompts for this profile
             starters=[
                 cl.Starter(
@@ -658,6 +706,15 @@ async def on_chat_start():
         cl.user_session.set("welcome_msg", welcome_msg) # Store welcome message
         # Send the welcome message
         await welcome_msg.send()
+
+    elif chat_profile == "Content Translation":
+        # Initialize or retrieve the cached chain
+        rx_translation = rx_translator()
+        # Store the chain and an empty chat history
+        cl.user_session.set("rx_translation", rx_translation)
+        cl.user_session.set("chat_history_translator", []) # Initialize history
+        # No initial form is sent for this profile
+
 
 @cl.action_callback("submit_selections") # Decorator for Web/App form submission
 async def on_submit_selections(action: cl.Action):
@@ -1055,6 +1112,81 @@ async def on_message(message: cl.Message):
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Content Refinement: {e}")
                 if attempt == max_retries - 1:
                     await msg_copywriter.update(content=f"Sorry, I encountered an error after {max_retries} attempts refining content. Please try again later.")
+                # await cl.sleep(1)
+    
+    # --- Arabic Content Translation Interaction ---
+    elif chat_profile == "Content Translation":
+        rx_translation = cl.user_session.get("rx_translation")
+        chat_history_translator = cl.user_session.get("chat_history_translator")
+        config = {"configurable": {"thread_id": message.thread_id}}
+
+        # Check for file attachments in the message
+        if message.elements:
+            # Assuming only one file attachment is handled per message here
+            file_element = message.elements[0]
+            file_path = file_element.path # Chainlit provides the path to the temp file
+            file_name = file_element.name
+            extracted_doc_content = ""
+            try:
+                # Open the file from the path provided by Chainlit
+                with open(file_path, "rb") as f:
+                    if file_name.lower().endswith('.docx'):
+                        extracted_doc_content = read_docx(f)
+                        file_type_desc = "Word document"
+                    elif file_name.lower().endswith('.pdf'):
+                        extracted_doc_content = read_pdf(f)
+                        file_type_desc = "PDF document"
+                    else:
+                        file_type_desc = "attached file" # Generic fallback
+                        logging.warning(f"Received unsupported file type in Content Translation: {file_name}")
+
+                # If text was extracted, prepend it to the user message
+                if extracted_doc_content:
+                    user_msg = (
+                        f"{user_msg}\n\n--- Content from attached {file_type_desc} ('{file_name}') ---\n"
+                        f"{extracted_doc_content}\n"
+                        f"--- End of attached content ---"
+                    )
+                    logging.info(f"Added content from attached file '{file_name}' to translate prompt.")
+                else:
+                     logging.warning(f"Could not extract text from attached file: {file_name}")
+                     # Optionally inform the user:
+                     # await cl.Message(content=f"Could not extract text from the attached file: {file_name}").send()
+
+            except FileNotFoundError:
+                 logging.error(f"File not found at path provided by Chainlit: {file_path}")
+                 await cl.Message(content=f"Error accessing the attached file: {file_name}. Please try attaching it again.").send()
+            except Exception as e:
+                 logging.error(f"Error processing attached file '{file_name}' in Content Translator: {e}")
+                 await cl.Message(content=f"Error processing the attached file: {file_name}. Please try again.").send()
+
+
+        # Prepare query and message for streaming
+        query = {"chat_history": chat_history_translator, "input": user_msg}
+        msg_translator = cl.Message(content="", author="Riyadh Air")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                # Stream response
+                async for chunk in rx_translation.astream(query, config=config):
+                    await msg_translator.stream_token(chunk)
+                    full_msg += chunk
+
+                # Update history
+                chat_history_translator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
+                chat_history_translator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_translator", chat_history_translator)
+
+                await msg_translator.send()
+                logging.info("Successfully generated and streamed response for Content Translator.")
+                return # Exit on success
+
+            except Exception as e:
+                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Content Translator: {e}")
+                if attempt == max_retries - 1:
+                    await msg_translator.update(content=f"Sorry, I encountered an error after {max_retries} attempts to translate content. Please try again later.")
                 # await cl.sleep(1)
 
     # --- Lifecycle Content Creation Follow-up ---
