@@ -5,6 +5,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Upload, FileText, FileIcon } from "lucide-react";
 
+// Helper function to recursively find a question definition by its ID
+// within the initial nested structure (mapped by load_questions).
+const findQuestionDefinition = (questions, targetId) => {
+  for (const q of questions) {
+    if (q.questionId === targetId) {
+      return q; // Found the question definition
+    }
+    // Recursively search within the 'subQuestions' property (mapped from JSON's 'sub_questions')
+    if (q.subQuestions) {
+      for (const key in q.subQuestions) {
+        // The items within subQuestions[key] are arrays of question definitions
+        const found = findQuestionDefinition(q.subQuestions[key], targetId);
+        if (found) {
+          return found; // Return the found definition
+        }
+      }
+    }
+  }
+  return null; // Not found in this branch
+};
+
+
 export default function MultiSelectQuestions() {
   // Use the globally injected `props` object.
   const initialQuestions = props.questions || [];
@@ -118,90 +140,91 @@ export default function MultiSelectQuestions() {
 
   // Update selections and dynamically adjust visible questions
   const handleSelectChange = (questionId, value) => {
-    // First, find the question that was answered
+    // First, find the question that was answered in the visible list
     const questionIndex = visibleQuestions.findIndex(q => q.questionId === questionId);
     if (questionIndex === -1) return;
 
     // Create a copy of the current questions
-    const updatedQuestions = [...visibleQuestions];
-    
-    // Handle special cases: "Other" or "Yes, add additional info"
+    let updatedQuestions = [...visibleQuestions];
+    const answeredQuestionState = updatedQuestions[questionIndex];
+
+    // Update the state of the answered question (selected value, isOther)
     if (value === "Other (Enter your own)" || value === "Yes, add additional info") {
       updatedQuestions[questionIndex] = {
-        ...updatedQuestions[questionIndex],
+        ...answeredQuestionState,
         isOther: true,
-        selected: ""
+        selected: "" // Clear selection for 'Other' initially
       };
     } else {
       updatedQuestions[questionIndex] = {
-        ...updatedQuestions[questionIndex],
+        ...answeredQuestionState,
         isOther: false,
         selected: value
       };
     }
-    
+
     // Handle hierarchical questions if enabled
     if (enableHierarchy) {
-      // Find the current question
-      const currentQuestion = initialQuestions.find(q => q.questionId === questionId);
-      
-      // Also search in any subQuestions that might be present in visible questions
-      let foundSubQuestion;
-      if (!currentQuestion) {
-        for (const question of visibleQuestions) {
-          if (question.subQuestions && question.subQuestions[question.selected]) {
-            const subQs = question.subQuestions[question.selected];
-            foundSubQuestion = subQs.find(sq => sq.abbrev === questionId);
-            if (foundSubQuestion) break;
-          }
-        }
-      }
-      
-      const targetQuestion = currentQuestion || foundSubQuestion;
-      
+      // Find the definition of the question that was just answered using the helper
+      // Search within the initialQuestions structure (which uses 'subQuestions')
+      const targetQuestionDefinition = findQuestionDefinition(initialQuestions, questionId);
+
       // Remove any existing sub-questions that depended on the previous answer
-      const level = updatedQuestions[questionIndex].level || 0;
+      const level = answeredQuestionState.level || 0;
       const questionToRemoveIds = new Set();
-      
-      // Find all child questions to remove (and their children)
-      const findChildrenToRemove = (parentId, startIdx = 0) => {
-        for (let i = startIdx; i < updatedQuestions.length; i++) {
-          const q = updatedQuestions[i];
-          if (q.parentId === parentId) {
-            questionToRemoveIds.add(q.questionId);
-            // Recursively find children of this question too
-            findChildrenToRemove(q.questionId, i + 1);
-          }
+
+      // Find all child questions to remove (and their children recursively)
+      const findChildrenToRemove = (parentId) => {
+        // Iterate through a *copy* of updatedQuestions or use indices carefully
+        // to avoid issues with modifying the array while iterating.
+        const children = updatedQuestions.filter(q => q.parentId === parentId);
+        for (const child of children) {
+           if (!questionToRemoveIds.has(child.questionId)) { // Avoid redundant checks/infinite loops
+             questionToRemoveIds.add(child.questionId);
+             findChildrenToRemove(child.questionId); // Recursive call
+           }
         }
       };
-      
-      findChildrenToRemove(questionId, questionIndex + 1);
-      
-      // Filter out questions that need to be removed
-      const filteredQuestions = updatedQuestions.filter(q => !questionToRemoveIds.has(q.questionId));
-      
-      // Add new sub-questions if this answer has any
-      if (targetQuestion && targetQuestion.subQuestions && targetQuestion.subQuestions[value]) {
-        const subQuestions = targetQuestion.subQuestions[value].map(sq => ({
-          questionId: sq.abbrev,
+
+      // Start removal process from the current question's ID
+      findChildrenToRemove(questionId);
+
+      // Filter out questions marked for removal
+      let filteredQuestions = updatedQuestions.filter(q => !questionToRemoveIds.has(q.questionId));
+
+      // Add new sub-questions if the definition and the selected value have them
+      if (targetQuestionDefinition && targetQuestionDefinition.subQuestions && targetQuestionDefinition.subQuestions[value]) {
+        const subQuestionsToAdd = targetQuestionDefinition.subQuestions[value].map(sq => ({
+          // Map the definition (sq) to the state structure
+          questionId: sq.questionId, // Use questionId from the processed definition
           question: sq.question,
-          type: sq.type || "options",
-          options: sq.value || [],
-          selected: "",
-          isOther: false,
-          subQuestions: sq.sub_questions || {},
+          type: sq.type,
+          options: sq.options,
+          selected: "", // Initial state
+          isOther: false, // Initial state
+          // *** CORRECTION: Use sq.subQuestions as processed by load_questions ***
+          subQuestions: sq.subQuestions || {}, // Pass definitions for the *next* level
+          // Hierarchy tracking
           level: level + 1,
           parentId: questionId,
           parentValue: value
         }));
-        
-        // Insert sub-questions right after their parent question
-        filteredQuestions.splice(questionIndex + 1, 0, ...subQuestions);
+
+        // Find the index of the parent question *in the filtered list*
+        const parentIndexFiltered = filteredQuestions.findIndex(q => q.questionId === questionId);
+        if (parentIndexFiltered !== -1) {
+            // Insert sub-questions right after their parent question
+            filteredQuestions.splice(parentIndexFiltered + 1, 0, ...subQuestionsToAdd);
+        } else {
+            // Fallback: append if parent somehow disappeared (should not happen)
+            console.error("Parent question not found in filtered list during sub-question insertion.");
+            filteredQuestions = [...filteredQuestions, ...subQuestionsToAdd];
+        }
       }
-      
+
       setVisibleQuestions(filteredQuestions);
     } else {
-      // For non-hierarchical forms, just update the question
+      // For non-hierarchical forms, just update the single question's state
       setVisibleQuestions(updatedQuestions);
     }
   };

@@ -1,6 +1,6 @@
 """
 This script implements a Chainlit application for generating various types of content
-(Web/App, Lifecycle, Social Media, Policy) for Riyadh Air using Azure OpenAI models.
+(Web/App, Lifecycle, Policy) for Riyadh Air using Azure OpenAI models.
 It includes features like user authentication, chat profiles, dynamic form generation
 based on JSON files, file uploads (PDF, DOCX), text extraction, and interaction
 with Azure Key Vault and MongoDB.
@@ -10,16 +10,12 @@ import os
 import re
 import json
 import logging
-import uuid
 import base64
 import io
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-from langchain_core.messages import ToolMessage, AIMessage, HumanMessage
-from langgraph.checkpoint.memory import MemorySaver # Although imported, MemorySaver is not used in the current script
+from langchain_core.messages import AIMessage, HumanMessage
 
-from langchain.tools import StructuredTool # Although imported, StructuredTool is not used in the current script
 from langchain_openai import AzureChatOpenAI
 import tiktoken # For token counting
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -35,7 +31,6 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate_social_media import USER_SELECTION_SOCIAL_MEDIA, USER_INPUT_SOCIAL_MEDIA, SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
@@ -205,21 +200,79 @@ def num_tokens(text: str, model: str = 'gpt-4o-mini') -> int:
     # Encode the text and return the number of tokens
     return len(encoding.encode(text))
 
+def _process_question_recursive(question_data):
+    """
+    Recursively processes a question dictionary or list, mapping 'sub_questions'
+    to 'subQuestions' and ensuring necessary keys are present.
+    """
+    processed_questions = []
+    if isinstance(question_data, list):
+        items_to_process = question_data
+    elif isinstance(question_data, dict) and "questions" in question_data:
+         # Handle structure like lifecycle JSON root
+        items_to_process = question_data["questions"]
+    elif isinstance(question_data, dict):
+         # Handle structure like web_app JSON root (dict of questions)
+         # Convert dict to list of dicts first
+         items_to_process = []
+         for q_text, details in question_data.items():
+             # Ensure it looks like a question definition
+             if isinstance(details, dict) and ("type" in details or "abbrev" in details):
+                 # Add the question text back into the details dict
+                 details["question"] = q_text
+                 items_to_process.append(details)
+             else:
+                 logging.warning(f"Skipping non-question item in dict structure: {q_text}")
+    else:
+        logging.error(f"Unexpected data type for recursive processing: {type(question_data)}")
+        return [] # Return empty list for unexpected types
+
+    for details in items_to_process:
+        if not isinstance(details, dict):
+            logging.warning(f"Skipping non-dictionary item in question list: {details}")
+            continue
+
+        question_id = details.get("questionId", details.get("abbrev"))
+        if not question_id:
+            logging.warning(f"Skipping question due to missing 'questionId' or 'abbrev': {details.get('question')}")
+            continue
+
+        processed_q = {
+            "questionId": question_id,
+            "question": details.get("question", ""),
+            "type": details.get("type", "options"),
+            "options": details.get("value", []),
+            "selected": "",
+            "isOther": False,
+            # Recursively process sub_questions if they exist
+            "subQuestions": {} # Initialize as empty dict
+        }
+
+        raw_sub_questions = details.get("sub_questions")
+        if raw_sub_questions and isinstance(raw_sub_questions, dict):
+            processed_subs = {}
+            for key, sub_list in raw_sub_questions.items():
+                # Recursively process the list of sub-questions for this key
+                processed_subs[key] = _process_question_recursive(sub_list)
+            processed_q["subQuestions"] = processed_subs
+
+        processed_questions.append(processed_q)
+
+    return processed_questions
+
 def load_questions(filename="utils/questions_generate_webapp.json"):
     """
-    Loads questions from a specified JSON file and formats them for the
-    Chainlit CustomElement frontend component.
-
-    Handles different potential JSON structures (list of questions or dictionary).
+    Loads questions from a specified JSON file and formats them recursively
+    for the Chainlit CustomElement frontend component, ensuring consistent
+    use of 'subQuestions' key.
 
     Args:
         filename (str): The path to the JSON file containing the questions.
-                        Defaults to "utils/questions_generate_webapp.json".
 
     Returns:
         list: A list of dictionaries, where each dictionary represents a question
-              formatted for the frontend. Returns an empty list if the file is
-              not found, cannot be decoded, or has an unknown structure.
+              formatted for the frontend with nested 'subQuestions'. Returns an
+              empty list on error.
     """
     try:
         with open(filename, "r", encoding="utf-8") as f:
@@ -231,52 +284,8 @@ def load_questions(filename="utils/questions_generate_webapp.json"):
         logging.error(f"Error decoding JSON from file: {filename}")
         return []
 
-    questions = []
-
-    # Check if the primary structure is a dictionary containing a "questions" list
-    # (Used in lifecycle/social_media JSONs)
-    if "questions" in data and isinstance(data["questions"], list):
-        for details in data["questions"]:
-            # Use 'questionId' if available, otherwise fallback to 'abbrev'
-            question_id = details.get("questionId", details.get("abbrev"))
-            if not question_id:
-                 logging.warning(f"Skipping question due to missing 'questionId' or 'abbrev' in {filename}: {details.get('question')}")
-                 continue # Skip if no identifier found
-
-            questions.append({
-                "questionId": question_id,
-                "question": details.get("question", ""), # Question text
-                "type": details.get("type", "options"), # Question type (e.g., 'options', 'text', 'file')
-                "options": details.get("value", []), # Options for 'options' type
-                "selected": "", # Placeholder for frontend state
-                "isOther": False, # Placeholder for frontend state (e.g., 'Other' option)
-                "subQuestions": details.get("sub_questions", {}) # Nested sub-questions if any
-            })
-    # Check if the primary structure is a dictionary where keys are questions
-    # (Used in web_app JSON)
-    elif isinstance(data, dict):
-        # Filter out potential non-question keys (like 'tool_type')
-        question_items = {k: v for k, v in data.items() if isinstance(v, dict) and ("type" in v or "abbrev" in v)}
-        for question_text, details in question_items.items():
-            # Use 'questionId' if available, otherwise fallback to 'abbrev'
-            question_id = details.get("questionId", details.get("abbrev"))
-            if not question_id:
-                 logging.warning(f"Skipping question due to missing 'questionId' or 'abbrev' in {filename}: {question_text}")
-                 continue # Skip if no identifier found
-
-            questions.append({
-                "questionId": question_id,
-                "question": question_text, # The dictionary key is the question text
-                "type": details.get("type", "options"), # Question type
-                "options": details.get("value", []), # Options
-                "selected": "", # Placeholder for frontend state
-                "isOther": False, # Placeholder for frontend state
-                "subQuestions": details.get("sub_questions", {}) # Nested sub-questions
-            })
-    else:
-        # Log error if the JSON structure is not recognized
-        logging.error(f"Unknown JSON structure in file: {filename}")
-
+    # Start the recursive processing
+    questions = _process_question_recursive(data)
     return questions
 
 def extract_text_from_file_data(file_data):
@@ -427,35 +436,6 @@ def rx_lifecycle_creator():
     return chain
 
 @cl.cache # Cache the initialized chain
-def rx_social_media_creator(sys_msg: str = SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT):
-    """
-    Initializes and returns a Langchain Runnable sequence (chain) for
-    Social Media content creation.
-
-    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for social media.
-
-    Args:
-        sys_msg (str): The system prompt to configure the LLM. Defaults to
-                       SOCIAL_MEDIA_CONTENT_GEN_SYS_PROMPT from utils.
-
-    Returns:
-        Runnable: The initialized Langchain chain.
-    """
-    # Define the prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_msg),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("user", "{input}")
-    ])
-    # Initialize the Azure OpenAI chat model
-    llm = AzureChatOpenAI(model=azure_chat_model_name, temperature=0.5, api_key=azure_openai_api_key, api_version=openai_api_version, azure_endpoint=azure_openai_endpoint)
-    # Use a simple string output parser
-    output_parser = StrOutputParser()
-    # Combine into a chain
-    chain = prompt | llm | output_parser
-    return chain
-
-@cl.cache # Cache the initialized chain
 def rx_policy_gen(sys_msg: str = RX_POLICY_SYS_MSG):
     """
     Initializes and returns a Langchain Runnable sequence (chain) for
@@ -562,7 +542,7 @@ async def chat_profile(current_user: cl.User):
     Returns:
         list[cl.ChatProfile]: A list of ChatProfile objects defining the available modes.
     """
-    user_role = current_user.metadata.get("role") # Get user role (currently unused)
+    user_role = current_user.metadata.get("role") # Get user role
     return [
         cl.ChatProfile(
             name="Web & App Content Creation",
@@ -574,12 +554,7 @@ async def chat_profile(current_user: cl.User):
             markdown_description="Generate Lifecycle content for Riyadh Air.",
             icon="/public/lifecycle.svg"
         ),
-        # cl.ChatProfile( # Social Media profile currently commented out
-        #     name="Social Media Content Creation",
-        #     markdown_description="Refine existing content for Riyadh Air.",
-        #     icon="/public/user_circle.svg"
-        # ),
-        # cl.ChatProfile( # Policy Generation profile currently commented out
+        # cl.ChatProfile(
         #     name="RX Policy Generation",
         #     markdown_description="Generate policy documents for Riyadh Air.",
         #     icon="/public/policy.svg"
@@ -716,31 +691,6 @@ async def on_chat_start():
         # Create and send the form message
         form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
         cl.user_session.set("lifecycle_form_msg", form_msg) # Store form message
-        await form_msg.send()
-
-    # --- Social Media Content Creation Profile ---
-    elif chat_profile == "Social Media Content Creation":
-        # Initialize or retrieve the cached chain
-        rx_social_media_create = rx_social_media_creator()
-        # Store the chain and an empty chat history
-        cl.user_session.set("rx_social_media_creator", rx_social_media_create)
-        cl.user_session.set("chat_history_social_media_creator", []) # Initialize history
-
-        # Load questions specific to this profile
-        questions = load_questions("utils/question_social_media.json")
-
-        # Create the custom UI element
-        multi_select_element = cl.CustomElement(
-            name="MultiSelectQuestions",
-            props={
-                "questions": questions,
-                "submitActionName": "submit_social_media_selections", # Specific action name
-                "enableHierarchy": True # Enable hierarchical display
-            }
-        )
-        # Create and send the form message
-        form_msg = cl.Message(content="Please answer the following questions for social media content:", elements=[multi_select_element])
-        cl.user_session.set("social_media_form_msg", form_msg) # Store form message
         await form_msg.send()
 
     # --- RX Policy Generation Profile ---
@@ -1028,106 +978,6 @@ async def on_submit_lifecycle_selections(action: cl.Action):
         logging.error(f"Error processing lifecycle selections: {e}")
         await cl.Message(content="An error occurred while processing your lifecycle selections. Please check the logs and try again.").send()
 
-@cl.action_callback("submit_social_media_selections") # Decorator for Social Media form submission
-async def on_submit_social_media_selections(action: cl.Action):
-    """
-    Handles the submission of the form from the 'Social Media Content Creation' profile.
-
-    Processes user selections and files, formats the prompt, sends it to the LLM,
-    and streams the response.
-
-    Args:
-        action (cl.Action): The action object containing the payload ('selections', 'files').
-    """
-    # Retrieve and remove the original form message
-    form_msg = cl.user_session.get("social_media_form_msg")
-    if form_msg:
-        await form_msg.remove()
-
-    # Extract selections and file data
-    selections = action.payload.get("selections", [])
-    files_data = action.payload.get("files", {})
-
-    # Build mapping and extract file contents
-    user_responses = {}
-    file_contents = []
-    for q in selections:
-        answer = q.get("selected", "").strip()
-        if answer:
-            user_responses[q["questionId"]] = answer
-            # Process associated file
-            if q["questionId"] in files_data:
-                try:
-                    extracted_text = extract_text_from_file_data(files_data[q["questionId"]])
-                    file_contents.append(f"\n--- Content from attached file for '{answer}' ---\n{extracted_text}\n--- End of attached content ---")
-                    logging.info(f"Extracted text for social media questionId '{q['questionId']}'")
-                except Exception as e:
-                    logging.error(f"Error processing file for social media questionId '{q['questionId']}': {e}")
-                    await cl.Message(content=f"Error processing the attached file for question '{q.get('question', q['questionId'])}'. Please try again.").send()
-                    # return # Option: Stop if file processing fails
-
-    # Check if selections were made
-    if not user_responses:
-        logging.warning("Social Media form submitted with no selections.")
-        await cl.Message(content="Please make at least one selection before submitting.").send()
-        return
-
-    try:
-        # Format the user input part of the prompt
-        filled_prompt = adjust_template(USER_INPUT_SOCIAL_MEDIA["content_gen_prompt"], user_responses)
-        # Send confirmation message
-        await cl.Message(content=f"You have selected the following options:\n{filled_prompt[12:]}").send() # Slice might remove header
-
-        # Append file contents
-        if file_contents:
-            filled_prompt += "\n" + "\n".join(file_contents)
-            logging.info("Appended extracted file content to the social media prompt.")
-
-        # Store the prompt (optional)
-        cl.user_session.set("filled_prompt", filled_prompt)
-
-        # Retrieve chain and history
-        rx_social_media_create = cl.user_session.get("rx_social_media_creator")
-        chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
-
-        # Prepare query (uses the default system prompt defined in rx_social_media_creator)
-        query = {
-            "chat_history": chat_history_social_media_creator,
-            "input": filled_prompt
-        }
-
-        # Create message for streaming
-        msg_contentgen = cl.Message(content="", author="Riyadh Air")
-
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                full_msg = ""
-                # Stream response
-                async for chunk in rx_social_media_create.astream(query):
-                    await msg_contentgen.stream_token(chunk)
-                    full_msg += chunk
-
-                # Update history
-                chat_history_social_media_creator.append(HumanMessage(content=filled_prompt))
-                chat_history_social_media_creator.append(AIMessage(content=full_msg))
-                cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
-
-                await msg_contentgen.send()
-                logging.info("Successfully generated and streamed response for Social Media content.")
-                return # Exit on success
-
-            except Exception as e:
-                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Social Media content: {e}")
-                if attempt == max_retries - 1:
-                    await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts generating social media content. Please try again later.")
-                # await cl.sleep(1)
-
-    except Exception as e:
-        # Catch errors during prompt formatting etc.
-        logging.error(f"Error processing social media selections: {e}")
-        await cl.Message(content="An error occurred while processing your social media selections. Please check the logs and try again.").send()
-
 @cl.on_message
 async def on_message(message: cl.Message):
     """
@@ -1383,50 +1233,6 @@ async def on_message(message: cl.Message):
 
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Lifecycle content: {e}")
-                if attempt == max_retries - 1:
-                    await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts. Please try again later.")
-                # await cl.sleep(1)
-
-    # --- Social Media Content Creation Follow-up ---
-    elif chat_profile == "Social Media Content Creation":
-        rx_social_media_create = cl.user_session.get("rx_social_media_creator")
-        chat_history_social_media_creator = cl.user_session.get("chat_history_social_media_creator")
-        # Check if initial form was submitted
-        if not chat_history_social_media_creator:
-            logging.warning("Received follow-up message in Social Media profile before initial form submission.")
-            await cl.Message(content="Please start a new chat or submit the form to generate social media content.").send()
-            return
-
-        # Prepare query (uses the default system prompt for this profile)
-        query = {
-            "chat_history": chat_history_social_media_creator,
-            "input": user_msg
-        }
-        config = {"configurable": {"thread_id": message.thread_id}}
-
-        # Create message for streaming
-        msg_contentgen = cl.Message(content="", author="Riyadh Air")
-
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                full_msg = ""
-                # Stream response
-                async for chunk in rx_social_media_create.astream(query, config=config):
-                    await msg_contentgen.stream_token(chunk)
-                    full_msg += chunk
-
-                # Update history
-                chat_history_social_media_creator.append(HumanMessage(content=user_msg))
-                chat_history_social_media_creator.append(AIMessage(content=full_msg))
-                cl.user_session.set("chat_history_social_media_creator", chat_history_social_media_creator)
-
-                await msg_contentgen.send()
-                logging.info("Successfully generated and streamed follow-up response for Social Media content.")
-                return # Exit on success
-
-            except Exception as e:
-                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Social Media content: {e}")
                 if attempt == max_retries - 1:
                     await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts. Please try again later.")
                 # await cl.sleep(1)
