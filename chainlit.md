@@ -27,4 +27,10 @@ This document tracks the version history of the AI Content Gen App
 - **Notes:**
     - Implemented file upload/attachment feature across all tools allowing users to upload supporting documents (PDF or DOCX only) to enhance model context.
 
-## v0.5
+## v1.0 - Beta Release with Translation Tool
+- **Release Date:** 2025-04-10
+- **Notes:**
+    - Added content translation tool as a standalone feature to translate English content to Modern Standard Arabic.
+    - Integrated translation capabilities within existing tools for seamless multilingual content creation.
+    - Ensured all translations adhere to Riyadh Air's tone of voice guidelines.
+    - Incorporated approved Arabic lexicon to maintain brand consistency across languages.
