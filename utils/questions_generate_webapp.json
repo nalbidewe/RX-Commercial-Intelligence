@@ -73,6 +73,16 @@
         "abbrev": "content_length",
         "mandatory": true
     },
+    "Which language(s) would you like the content in? (Content follows Riyadh Air’s official tone of voice and approved lexicon)": {
+    "type": "options",
+    "value": [
+        "English only",
+        "Arabic only",
+        "Both English and Arabic"
+    ],
+    "abbrev": "language_preference",
+    "mandatory": true
+    },
     "Additional context or instructions for the model: (If any)": {
         "type": "text",
         "value": ["Yes, add additional info"],
