@@ -32,7 +32,7 @@ from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
 from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
-from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT
+from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     USER_SELECTION_MSG_LIFECYCLE,
@@ -737,7 +737,6 @@ async def on_submit_selections(action: cl.Action):
     # Extract selections and file data from the action payload
     selections = action.payload.get("selections", [])
     files_data = action.payload.get("files", {}) # {questionId: fileData}
-
     # Build a mapping: questionId -> answer (only if answer is non-empty)
     mapping = {}
     for q in selections:
@@ -822,6 +821,22 @@ async def on_submit_selections(action: cl.Action):
     if file_contents_section:
         filled_prompt += "\n" + "\n".join(file_contents_section)
         logging.info("Appended extracted file content to the prompt.")
+
+    # specify language preference and provide neccessary instructions
+    language_preference = mapping.get("language_preference", "")
+    logging.info(f"Language selected: {language_preference}")
+
+    if language_preference == "Arabic only":
+        langauge_output_instruction = f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}" + "Output an Arabic version (following the provided lexicon and tone of voice)."
+
+    elif language_preference == "Both English and Arabic":
+        langauge_output_instruction = f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}" + "Output both an English and Arabic version (each following the provided lexicon and tone of voice)." 
+
+    else:
+        langauge_output_instruction =  "Output an English version (following the provided lexicon and tone of voice)." 
+        
+        # Append the Arabic system prompt to guide the model for Arabic content generation
+    filled_prompt += f"\n{langauge_output_instruction}"
 
     # Retrieve the chain and chat history from the session
     rx_content_create = cl.user_session.get("rx_content_creator")
