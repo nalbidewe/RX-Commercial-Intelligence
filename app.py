@@ -825,7 +825,7 @@ async def on_submit_selections(action: cl.Action):
     language_preference = mapping.get("language_preference", "")
     logging.info(f"Language selected: {language_preference}")
 
-    if language_preference == "Arabic only":
+    if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
     # Append the Arabic system prompt to guide the model for Arabic content generation
