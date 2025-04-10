@@ -73,7 +73,7 @@
         "abbrev": "content_length",
         "mandatory": true
     },
-    "Which language(s) would you like the content in? (Content follows Riyadh Air’s official tone of voice and approved lexicon)": {
+    "Which language(s) would you like the content in?": {
     "type": "options",
     "value": [
         "English only",

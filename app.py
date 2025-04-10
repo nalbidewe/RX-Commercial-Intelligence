@@ -31,11 +31,10 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, USER_SELECTION_MSG, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
-    USER_SELECTION_MSG_LIFECYCLE,
     SYSTEM_LIFECYCLE_PROMPT,
     EMAIL_TEMPLATE
 )
