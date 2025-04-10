@@ -826,15 +826,9 @@ async def on_submit_selections(action: cl.Action):
     logging.info(f"Language selected: {language_preference}")
 
     if language_preference == "Arabic only":
-        langauge_output_instruction = f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}" + "Output an Arabic version (following the provided lexicon and tone of voice)."
-
-    elif language_preference == "Both English and Arabic":
-        langauge_output_instruction = f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}" + "Output both an English and Arabic version (each following the provided lexicon and tone of voice)." 
-
-    else:
-        langauge_output_instruction =  "Output an English version (following the provided lexicon and tone of voice)." 
+        langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
-        # Append the Arabic system prompt to guide the model for Arabic content generation
+    # Append the Arabic system prompt to guide the model for Arabic content generation
     filled_prompt += f"\n{langauge_output_instruction}"
 
     # Retrieve the chain and chat history from the session

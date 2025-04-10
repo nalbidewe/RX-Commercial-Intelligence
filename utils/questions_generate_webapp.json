@@ -76,10 +76,9 @@
     "Which language(s) would you like the content in?": {
     "type": "options",
     "value": [
-        "English only",
-        "Arabic only",
-        "Both English and Arabic"
-    ],
+        "English",
+        "Arabic"
+        ],
     "abbrev": "language_preference",
     "mandatory": true
     },
