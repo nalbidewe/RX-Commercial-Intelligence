@@ -1,5 +1,4 @@
 {
-    "tool_type": "web_app",
     "What is the type of content?": {
         "type": "options",
         "value": [
@@ -73,6 +72,15 @@
         ],
         "abbrev": "content_length",
         "mandatory": true
+    },
+    "Which language(s) would you like the content in?": {
+    "type": "options",
+    "value": [
+        "English",
+        "Arabic"
+        ],
+    "abbrev": "language_preference",
+    "mandatory": true
     },
     "Additional context or instructions for the model: (If any)": {
         "type": "text",

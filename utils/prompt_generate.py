@@ -7,10 +7,12 @@ USER_INPUT = {
         "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
-        "7. **Additional context or instructions**: {additional_instructions}",
-        "8. **Attached document contents**: {attached_document}",
+        "7. **Language Preference**: {language_preference}",
+        "8. **Additional context or instructions**: {additional_instructions}",
+        "9. **Attached document contents**: {attached_document}",
     ]
 }
+
 USER_SELECTION_MSG = {
     "selections": [
         "You have selected the following:",
@@ -20,11 +22,13 @@ USER_SELECTION_MSG = {
         "4. **Key Message**: {key_message}",
         "5. **Content Platform**: {content_platform}",
         "6. **Content Length**: {content_length}",
-        "7. **Additional context or instructions**: {additional_instructions}",
-        "8. **Attached document contents**: {attached_document}",
+        "7. **Language Preference**: {language_preference}",
+        "8. **Additional context or instructions**: {additional_instructions}",
+        "9. **Attached document contents**: {attached_document}",
         "Would you like to proceed with this selection?"
-                ]
+    ]
 }
+
 
 CONTENT_GEN_SYS_PROMPT = """You are the "AI Content Generation" assistant for Riyadh Air. Your task is to create content for Riyadh Air based on the user inputs. Follow these guidelines and rules to ensure all your outputs reflect Riyadh Air’s brand tone of voice (TOV), personality, and preferred lexicon. Adhere to the instructions below for **every** response you produce.
 
