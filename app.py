@@ -1169,9 +1169,9 @@ async def on_message(message: cl.Message):
                  await cl.Message(content=f"Error processing the attached file: {file_name}. Please try again.").send()
 
 
-        # Prepare query and message for streaming
         query = {"chat_history": chat_history_translator, "input": user_msg}
         msg_translator = cl.Message(content="", author="Riyadh Air")
+        await msg_translator.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
@@ -1179,15 +1179,16 @@ async def on_message(message: cl.Message):
                 full_msg = ""
                 # Stream response
                 async for chunk in rx_translation.astream(query, config=config):
-                    await msg_translator.stream_token(chunk)
-                    full_msg += chunk
+                    full_msg += chunk # Accumulate the full response
+                    rendered_msg = f'<div style="text-align: right; direction: rtl;">{full_msg}</div>'
+                    msg_translator.content = rendered_msg # Append chunk to the message UI
+                    await msg_translator.update() # Update the message in the UI
+                    
 
                 # Update history
                 chat_history_translator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
                 chat_history_translator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_translator", chat_history_translator)
-
-                await msg_translator.send()
                 logging.info("Successfully generated and streamed response for Content Translator.")
                 return # Exit on success
 
