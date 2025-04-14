@@ -100,8 +100,7 @@ def get_secret_value(secretName, client):
 client = init_key_vault_client(en_tenant_id, en_client_id, en_client_secret)
 
 # Retrieve Azure OpenAI and other necessary secrets from Key Vault
-azure_chat_model_name_mini = get_secret_value("azure-openai-4o-mini-global", client) # Model name (mini)
-azure_chat_model_name = get_secret_value("azure-openai-4o-global", client) # Model name (standard)
+azure_chat_model_name = get_secret_value("azure-openai-41-global", client) # Model name (standard)
 azure_embeddings_model_name = get_secret_value("azure-openai-embedding-small", client) # Embeddings model name
 openai_api_version = get_secret_value("azure-openai-api-version", client) # API version
 azure_openai_endpoint= get_secret_value("azure-openai-endpoint", client) # API endpoint
@@ -146,32 +145,107 @@ def read_pdf(file) -> str:
 
 def read_docx(file) -> str:
     """
-    Extracts text content from a DOCX file object, handling paragraphs and tables.
+    Extracts text content from a DOCX file object, preserving formatting as Markdown and maintaining the original order of paragraphs and tables.
 
     Args:
         file: A file-like object (e.g., opened file or BytesIO) containing DOCX data.
 
     Returns:
-        str: The concatenated text extracted from paragraphs and tables in the DOCX.
-           Returns an empty string if the DOCX cannot be read.
+        str: The concatenated text extracted from paragraphs and tables in the DOCX,
+             with formatting preserved as Markdown and original order maintained.
+             Returns an empty string if the DOCX cannot be read.
     """
     try:
         doc = docx.Document(file)
         full_text = []
-        # Iterate through elements in the document body (paragraphs and tables)
-        for element in doc.element.body:
-            if element.tag.endswith('p'): # Check if the element is a paragraph
-                p = docx.text.paragraph.Paragraph(element, doc)
-                full_text.append(p.text)
-            elif element.tag.endswith('tbl'): # Check if the element is a table
-                table = docx.table.Table(element, doc)
-                table_text = []
-                # Iterate through rows and cells in the table
+
+        # Helper to convert run formatting to markdown
+        def run_to_md(run):
+            text = run.text
+            if not text:
+                return ""
+            if run.bold:
+                text = f"**{text}**"
+            if run.italic:
+                text = f"*{text}*"
+            if run.underline:
+                text = f"<u>{text}</u>"
+            return text
+
+        # Helper to get heading level from style name
+        def get_heading_level(style_name):
+            if style_name and style_name.lower().startswith("heading"):
+                try:
+                    return int(style_name.split()[-1])
+                except Exception:
+                    return None
+            return None
+
+        # Helper to check if paragraph is a list item
+        def is_list(paragraph):
+            style = paragraph.style.name.lower()
+            if "list bullet" in style or "bullet" in style:
+                return "ul"
+            if "list number" in style or "number" in style:
+                return "ol"
+            return None
+
+        # Map docx element objects to their corresponding docx Python objects
+        # This allows us to iterate in the original order (paragraphs and tables mixed)
+        body_elements = []
+        for child in doc.element.body.iterchildren():
+            if child.tag.endswith('p'):
+                # Find the corresponding Paragraph object
+                for para in doc.paragraphs:
+                    if para._p is child:
+                        body_elements.append(('p', para))
+                        break
+            elif child.tag.endswith('tbl'):
+                # Find the corresponding Table object
+                for table in doc.tables:
+                    if table._tbl is child:
+                        body_elements.append(('tbl', table))
+                        break
+
+        for el_type, el in body_elements:
+            if el_type == 'p':
+                para = el
+                style_name = para.style.name if para.style else ""
+                heading_level = get_heading_level(style_name)
+                list_type = is_list(para)
+                md_line = ""
+                md_text = "".join([run_to_md(run) for run in para.runs])
+                if not md_text.strip():
+                    continue
+                if heading_level:
+                    md_line = f"{'#' * heading_level} {md_text}"
+                elif list_type == "ul":
+                    md_line = f"- {md_text}"
+                elif list_type == "ol":
+                    md_line = f"1. {md_text}"
+                else:
+                    md_line = md_text
+                full_text.append(md_line)
+            elif el_type == 'tbl':
+                table = el
+                rows = []
                 for row in table.rows:
-                    row_text = [cell.text.strip() for cell in row.cells]
-                    table_text.append(" | ".join(row_text)) # Join cell text with '|'
-                full_text.append("\n".join(table_text)) # Join rows with newline
-        return "\n".join(full_text) # Join all extracted text parts
+                    cells = []
+                    for cell in row.cells:
+                        cell_text = []
+                        for para in cell.paragraphs:
+                            cell_text.append("".join([run_to_md(run) for run in para.runs]))
+                        cells.append(" ".join(cell_text).strip())
+                    rows.append(" | ".join(cells))
+                if rows:
+                    if len(rows) > 1:
+                        header_sep = " | ".join(["---"] * len(rows[0].split("|")))
+                        table_md = [rows[0], header_sep] + rows[1:]
+                    else:
+                        table_md = rows
+                    full_text.append("\n".join(table_md))
+
+        return "\n".join(full_text)
     except Exception as e:
         logging.error(f"Error reading DOCX: {e}")
         return "" # Return empty string on error
@@ -823,13 +897,14 @@ async def on_submit_selections(action: cl.Action):
 
     # specify language preference and provide neccessary instructions
     language_preference = mapping.get("language_preference", "")
+    cl.user_session.set("language_preference", language_preference)
     logging.info(f"Language selected: {language_preference}")
 
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
-    # Append the Arabic system prompt to guide the model for Arabic content generation
-    filled_prompt += f"\n{langauge_output_instruction}"
+        # Append the Arabic system prompt to guide the model for Arabic content generation
+        filled_prompt += f"\n{langauge_output_instruction}"
 
     # Retrieve the chain and chat history from the session
     rx_content_create = cl.user_session.get("rx_content_creator")
@@ -842,23 +917,40 @@ async def on_submit_selections(action: cl.Action):
     msg_contentgen = cl.Message(content="", author="Riyadh Air")
 
     max_retries = 3
+    await msg_contentgen.send()
+
     for attempt in range(max_retries):
+        full_msg = ""
         try:
-            full_msg = ""
-            # Stream the response from the Langchain chain
-            async for chunk in rx_content_create.astream(query):
-                await msg_contentgen.stream_token(chunk) # Append chunk to the message UI
-                full_msg += chunk # Accumulate the full response
+            if language_preference == "Arabic":
+                async for chunk in rx_content_create.astream(query):
+                    full_msg += chunk # Accumulate the full response
+                    rendered_msg = f'<div style="text-align: right; direction: rtl;">{full_msg}</div>'
+                    msg_contentgen.content = rendered_msg # Append chunk to the message UI
+                    await msg_contentgen.update() # Update the message in the UI
+                
+                # Update history
+                chat_history_content_creator.append(HumanMessage(content=filled_prompt)) # User message potentially includes file content
+                chat_history_content_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                logging.info("Successfully generated and streamed Arabic response for Web/App content.")
+                return # Exit on success
+                    
+            else:
+                # Stream the response from the Langchain chain
+                async for chunk in rx_content_create.astream(query):
+                    await msg_contentgen.stream_token(chunk) # Append chunk to the message UI
+                    full_msg += chunk # Accumulate the full response
 
-            # Update the chat history with the user prompt and the full AI response
-            chat_history_content_creator.append(HumanMessage(content=filled_prompt))
-            chat_history_content_creator.append(AIMessage(content=full_msg))
-            cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                # Update the chat history with the user prompt and the full AI response
+                chat_history_content_creator.append(HumanMessage(content=filled_prompt))
+                chat_history_content_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-            # Finalize the streamed message (though stream_token might handle this)
-            await msg_contentgen.send()
-            logging.info("Successfully generated and streamed response for Web/App content.")
-            return # Exit after successful generation
+                # Finalize the streamed message (though stream_token might handle this)
+                await msg_contentgen.send()
+                logging.info("Successfully generated and streamed response for Web/App content.")
+                return # Exit after successful generation
 
         except Exception as e:
             logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Web/App content: {e}")
@@ -1022,24 +1114,44 @@ async def on_message(message: cl.Message):
 
         # Create message for streaming response
         msg_contentgen = cl.Message(content="", author="Riyadh Air")
+        language_preference = cl.user_session.get("language_preference", "")
+        print('language',language_preference)
 
         max_retries = 3
+        await msg_contentgen.send()
+
         for attempt in range(max_retries):
             try:
                 full_msg = ""
-                # Stream response
-                async for chunk in rx_content_create.astream(query, config=config):
-                    await msg_contentgen.stream_token(chunk)
-                    full_msg += chunk
+                print(language_preference)
+                if language_preference == "Arabic":
+                    async for chunk in rx_content_create.astream(query):
+                        full_msg += chunk # Accumulate the full response
+                        rendered_msg = f'<div style="text-align: right; direction: rtl;">{full_msg}</div>'
+                        msg_contentgen.content = rendered_msg # Append chunk to the message UI
+                        await msg_contentgen.update() # Update the message in the UI
+                
+                    # Update history
+                    chat_history_content_creator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
+                    chat_history_content_creator.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                    logging.info("Successfully generated and streamed Arabic follow-up for Web/App content.")
+                    return # Exit on success
+                        
+                else:
+                    # Stream response
+                    async for chunk in rx_content_create.astream(query, config=config):
+                        await msg_contentgen.stream_token(chunk)
+                        full_msg += chunk
 
-                # Update history
-                chat_history_content_creator.append(HumanMessage(content=user_msg))
-                chat_history_content_creator.append(AIMessage(content=full_msg))
-                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                    # Update history
+                    chat_history_content_creator.append(HumanMessage(content=user_msg))
+                    chat_history_content_creator.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-                await msg_contentgen.send()
-                logging.info("Successfully generated and streamed follow-up response for Web/App content.")
-                return # Exit on success
+                    await msg_contentgen.send()
+                    logging.info("Successfully generated and streamed follow-up response for Web/App content.")
+                    return # Exit on success
 
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Web/App content: {e}")

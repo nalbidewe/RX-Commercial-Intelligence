@@ -1,4 +1,4 @@
-chainlit==2.4.400
+chainlit==2.5.5
 langchain
 langgraph
 langchain-community

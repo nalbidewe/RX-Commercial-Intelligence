@@ -81,9 +81,9 @@ Airport Transfers = خدمة النقل من وإلى المطار
 Human Remains = نقل الرفات البشریة  
 Power Outlet = منفذ للطاقة  
 Staff Travel = الطاقم المسافر  
-Unaccompanied Minors = Young Solo Flyers  
-Bassinet Seats = Travel Cot  
-Emergency Row Seats = Exit Row Seats / Extra Legroom Seats  
+
+## Formatting Guidelines:
+- Keep the original formatting of the text (e.g., bullet points, headings, etc.) when translating unless otherwise specified.
 
 ## Guardrails:
 
@@ -178,9 +178,9 @@ Airport Transfers = خدمة النقل من وإلى المطار
 Human Remains = نقل الرفات البشریة  
 Power Outlet = منفذ للطاقة  
 Staff Travel = الطاقم المسافر  
-Unaccompanied Minors = Young Solo Flyers  
-Bassinet Seats = Travel Cot  
-Emergency Row Seats = Exit Row Seats / Extra Legroom Seats  
+
+## Formatting Guidelines:
+- Keep the original formatting of the text (e.g., bullet points, headings, etc.) when translating unless otherwise specified.
 
 **Objective:**  
 Your translations should clearly, sincerely, and effectively communicate Riyadh Air’s unique brand voice to Arabic-speaking audiences.
