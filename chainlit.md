@@ -34,3 +34,10 @@ This document tracks the version history of the AI Content Gen App
     - Integrated **translation capabilities** within existing tools for seamless multilingual content creation.
     - Ensured all translations adhere to Riyadh Air's **tone of voice guidelines**.
     - Incorporated approved **Arabic lexicon** to maintain brand consistency across languages.
+
+## v1.1 - Model & Arabic Enhancements
+- **Release Date:** 2025-04-15
+- **Notes:**
+    - Updated OpenAI models to the new **GPT-4.1** for improved performance and accuracy.
+    - Implemented **right-to-left (RTL) direction flow** and **right alignment** for Arabic text in the UI.
+    - Enhanced **Arabic translation quality** for more natural and contextually accurate outputs.
