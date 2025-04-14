@@ -12,6 +12,7 @@ import json
 import logging
 import base64
 import io
+import markdown
 
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
@@ -823,13 +824,14 @@ async def on_submit_selections(action: cl.Action):
 
     # specify language preference and provide neccessary instructions
     language_preference = mapping.get("language_preference", "")
+    cl.user_session.set("language_preference", language_preference)
     logging.info(f"Language selected: {language_preference}")
 
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
-    # Append the Arabic system prompt to guide the model for Arabic content generation
-    filled_prompt += f"\n{langauge_output_instruction}"
+        # Append the Arabic system prompt to guide the model for Arabic content generation
+        filled_prompt += f"\n{langauge_output_instruction}"
 
     # Retrieve the chain and chat history from the session
     rx_content_create = cl.user_session.get("rx_content_creator")
@@ -842,23 +844,41 @@ async def on_submit_selections(action: cl.Action):
     msg_contentgen = cl.Message(content="", author="Riyadh Air")
 
     max_retries = 3
+    await msg_contentgen.send()
+
     for attempt in range(max_retries):
+        full_msg = ""
         try:
-            full_msg = ""
-            # Stream the response from the Langchain chain
-            async for chunk in rx_content_create.astream(query):
-                await msg_contentgen.stream_token(chunk) # Append chunk to the message UI
-                full_msg += chunk # Accumulate the full response
+            if language_preference == "Arabic":
+                async for chunk in rx_content_create.astream(query):
+                    full_msg += chunk # Accumulate the full response
+                    html_content = markdown.markdown(full_msg)
+                    rendered_msg = f'<div style="text-align: right; direction: rtl;">{html_content}</div>'
+                    msg_contentgen.content = rendered_msg # Append chunk to the message UI
+                    await msg_contentgen.update() # Update the message in the UI
+                
+                # Update history
+                chat_history_content_creator.append(HumanMessage(content=filled_prompt)) # User message potentially includes file content
+                chat_history_content_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                logging.info("Successfully generated and streamed Arabic response for Web/App content.")
+                return # Exit on success
+                    
+            else:
+                # Stream the response from the Langchain chain
+                async for chunk in rx_content_create.astream(query):
+                    await msg_contentgen.stream_token(chunk) # Append chunk to the message UI
+                    full_msg += chunk # Accumulate the full response
 
-            # Update the chat history with the user prompt and the full AI response
-            chat_history_content_creator.append(HumanMessage(content=filled_prompt))
-            chat_history_content_creator.append(AIMessage(content=full_msg))
-            cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                # Update the chat history with the user prompt and the full AI response
+                chat_history_content_creator.append(HumanMessage(content=filled_prompt))
+                chat_history_content_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-            # Finalize the streamed message (though stream_token might handle this)
-            await msg_contentgen.send()
-            logging.info("Successfully generated and streamed response for Web/App content.")
-            return # Exit after successful generation
+                # Finalize the streamed message (though stream_token might handle this)
+                await msg_contentgen.send()
+                logging.info("Successfully generated and streamed response for Web/App content.")
+                return # Exit after successful generation
 
         except Exception as e:
             logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Web/App content: {e}")
@@ -1022,24 +1042,45 @@ async def on_message(message: cl.Message):
 
         # Create message for streaming response
         msg_contentgen = cl.Message(content="", author="Riyadh Air")
+        language_preference = cl.user_session.get("language_preference", "")
+        print('language',language_preference)
 
         max_retries = 3
+        await msg_contentgen.send()
+
         for attempt in range(max_retries):
             try:
                 full_msg = ""
-                # Stream response
-                async for chunk in rx_content_create.astream(query, config=config):
-                    await msg_contentgen.stream_token(chunk)
-                    full_msg += chunk
+                print(language_preference)
+                if language_preference == "Arabic":
+                    async for chunk in rx_content_create.astream(query):
+                        full_msg += chunk # Accumulate the full response
+                        html_content = markdown.markdown(full_msg)
+                        rendered_msg = f'<div style="text-align: right; direction: rtl;">{html_content}</div>'
+                        msg_contentgen.content = rendered_msg # Append chunk to the message UI
+                        await msg_contentgen.update() # Update the message in the UI
+                
+                    # Update history
+                    chat_history_content_creator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
+                    chat_history_content_creator.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                    logging.info("Successfully generated and streamed Arabic follow-up for Web/App content.")
+                    return # Exit on success
+                        
+                else:
+                    # Stream response
+                    async for chunk in rx_content_create.astream(query, config=config):
+                        await msg_contentgen.stream_token(chunk)
+                        full_msg += chunk
 
-                # Update history
-                chat_history_content_creator.append(HumanMessage(content=user_msg))
-                chat_history_content_creator.append(AIMessage(content=full_msg))
-                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                    # Update history
+                    chat_history_content_creator.append(HumanMessage(content=user_msg))
+                    chat_history_content_creator.append(AIMessage(content=full_msg))
+                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-                await msg_contentgen.send()
-                logging.info("Successfully generated and streamed follow-up response for Web/App content.")
-                return # Exit on success
+                    await msg_contentgen.send()
+                    logging.info("Successfully generated and streamed follow-up response for Web/App content.")
+                    return # Exit on success
 
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Web/App content: {e}")
@@ -1180,7 +1221,8 @@ async def on_message(message: cl.Message):
                 # Stream response
                 async for chunk in rx_translation.astream(query, config=config):
                     full_msg += chunk # Accumulate the full response
-                    rendered_msg = f'<div style="text-align: right; direction: rtl;">{full_msg}</div>'
+                    html_content = markdown.markdown(full_msg)
+                    rendered_msg = f'<div style="text-align: right; direction: rtl;">{html_content}</div>'
                     msg_translator.content = rendered_msg # Append chunk to the message UI
                     await msg_translator.update() # Update the message in the UI
                     
