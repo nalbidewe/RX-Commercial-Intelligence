@@ -101,8 +101,7 @@ def get_secret_value(secretName, client):
 client = init_key_vault_client(en_tenant_id, en_client_id, en_client_secret)
 
 # Retrieve Azure OpenAI and other necessary secrets from Key Vault
-azure_chat_model_name_mini = get_secret_value("azure-openai-4o-mini-global", client) # Model name (mini)
-azure_chat_model_name = get_secret_value("azure-openai-4o-global", client) # Model name (standard)
+azure_chat_model_name = get_secret_value("azure-openai-41-global", client) # Model name (standard)
 azure_embeddings_model_name = get_secret_value("azure-openai-embedding-small", client) # Embeddings model name
 openai_api_version = get_secret_value("azure-openai-api-version", client) # API version
 azure_openai_endpoint= get_secret_value("azure-openai-endpoint", client) # API endpoint
