@@ -16,3 +16,4 @@ psycopg[binary]
 asyncpg
 aiohttp
 pymongo
+markdown
