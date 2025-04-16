@@ -36,7 +36,7 @@ This document tracks the version history of the AI Content Gen App
     - Incorporated approved **Arabic lexicon** to maintain brand consistency across languages.
 
 ## v1.1 - Model & Arabic Enhancements
-- **Release Date:** 2025-04-15
+- **Release Date:** 2025-04-16
 - **Notes:**
     - Updated OpenAI models to the new **GPT-4.1** for improved performance and accuracy.
     - Implemented **right-to-left (RTL) direction flow** and **right alignment** for Arabic text in the UI.
