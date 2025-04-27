@@ -1,22 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Users</h1>
-<table class="table table-hover">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Identifier</th>
-      <th>Created At</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for user in users %}
-    <tr>
-      <td><a href="/user/{{ user.id }}">{{ user.id }}</a></td>
-      <td>{{ user.identifier }}</td>
-      <td>{{ user.createdAt }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<h1><i class="bi bi-people-fill"></i> Users</h1>
+<div class="card p-3 shadow-lg">
+  <table class="table table-hover align-middle mb-0">
+    <thead>
+      <tr>
+        <th><i class="bi bi-hash"></i> ID</th>
+        <th><i class="bi bi-person-badge"></i> Identifier</th>
+        <th><i class="bi bi-calendar-event"></i> Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td><a href="/user/{{ user.id }}" class="text-decoration-none fw-bold text-primary">{{ user.id }}</a></td>
+        <td>{{ user.identifier }}</td>
+        <td>{{ user.createdAt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

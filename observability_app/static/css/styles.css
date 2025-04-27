@@ -7,9 +7,29 @@ body {
 }
 
 /* Navbar styling enhancements */
+.navbar {
+  box-shadow: 0 4px 16px rgba(220, 53, 69, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 .navbar-brand {
   font-weight: 700;
   font-size: 1.5rem;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Footer styling */
+.footer {
+  background: linear-gradient(90deg, #dc3545 0%, #ff758c 100%);
+  color: #fff;
+  text-align: center;
+  padding: 1rem 0;
+  margin-top: 3rem;
+  border-radius: 12px 12px 0 0;
+  font-size: 1rem;
 }
 
 /* Container max-width for a spacious layout */
@@ -22,28 +42,101 @@ body {
   border: none;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
+}
+
+.card.bg-primary, .card.bg-success, .card.bg-warning {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+}
+.card.bg-success {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+.card.bg-warning {
+  background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+  color: #333;
+}
+.card.cool-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+}
+.card.cool-card:hover {
+  transform: scale(1.07) translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
 }
 
 /* Table styling for a clean data presentation */
 .table {
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  background: linear-gradient(90deg, #f8fafc 0%, #e9ecef 100%);
+  color: #444;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody tr {
+  transition: background 0.18s;
+}
+
+.table tbody tr:hover {
+  background: #f1f3f6;
 }
 
 .table th, .table td {
   vertical-align: middle;
   padding: 0.75rem;
+  border: none;
 }
 
 /* Headings color */
 h1, h2, h3 {
   color: #333333;
+  font-family: 'Montserrat', 'Roboto', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 1rem;
 }
 
 /* Add spacing between sections */
 .mt-4, .mb-4 {
   margin-top: 1.5rem !important;
   margin-bottom: 1.5rem !important;
+}
+
+/* Icon style */
+.bi {
+  vertical-align: -.125em;
+  margin-right: 0.4em;
+}
+
+/* Button enhancements */
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.btn-primary {
+  background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+  border: none;
+}
+.btn-primary:hover {
+  background: linear-gradient(90deg, #2575fc 0%, #6a11cb 100%);
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .container {
+    max-width: 98vw;
+    padding: 0 0.5rem;
+  }
+  .card.cool-card {
+    width: 100% !important;
+    height: 120px !important;
+  }
 }

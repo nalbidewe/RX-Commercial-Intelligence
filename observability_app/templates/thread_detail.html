@@ -1,22 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Thread Detail</h1>
-<p><strong>ID:</strong> {{ thread.id }}</p>
-<p><strong>Name:</strong> {{ thread.name or 'N/A' }}</p>
-<p><strong>Created At:</strong> {{ thread.createdAt }}</p>
-
-<h2>Steps</h2>
-<table class="table table-bordered" id="stepsTable">
+<h1><i class="bi bi-diagram-3-fill"></i> Thread Detail</h1>
+<div class="card p-4 mb-4 shadow-lg">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-hash"></i> ID:</span> {{ thread.id }}
+    </div>
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-card-text"></i> Name:</span> {{ thread.name or 'N/A' }}
+    </div>
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-calendar-event"></i> Created At:</span> {{ thread.createdAt }}
+    </div>
+  </div>
+</div>
+<h2 class="mb-3"><i class="bi bi-list-ol"></i> Steps</h2>
+<div class="card p-3 shadow-lg">
+<table class="table table-bordered align-middle" id="stepsTable">
   <thead>
     <tr>
-      <th style="width: 120px;">ID</th>
-      <th style="width: 150px;">Name</th>
-      <th style="width: 120px;">Type</th>
-      <th style="width: 180px;">Start Time</th>
-      <th style="width: 180px;">End Time</th>
-      <th style="width: 250px;">Input</th>
-      <th style="width: 300px;">Output (Markdown)</th>
-      <th style="width: 300px;">Feedback</th>
+      <th style="width: 120px;"><i class="bi bi-hash"></i> ID</th>
+      <th style="width: 150px;"><i class="bi bi-card-text"></i> Name</th>
+      <th style="width: 120px;"><i class="bi bi-tag"></i> Type</th>
+      <th style="width: 180px;"><i class="bi bi-play-circle"></i> Start Time</th>
+      <th style="width: 180px;"><i class="bi bi-stop-circle"></i> End Time</th>
+      <th style="width: 250px;"><i class="bi bi-box-arrow-in-right"></i> Input</th>
+      <th style="width: 300px;"><i class="bi bi-box-arrow-up-right"></i> Output (Markdown)</th>
+      <th style="width: 300px;"><i class="bi bi-emoji-smile"></i> Feedback</th>
     </tr>
   </thead>
   <tbody>
@@ -42,21 +52,19 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <!-- Include jQuery if not already included -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-
 <!-- colResizable plugin -->
 <script src="https://cdn.jsdelivr.net/gh/alvaro-prieto/colResizable@1.6/colResizable-1.6.min.js"></script>
-
 <script>
   // Make the columns in #stepsTable resizable
   $(document).ready(function(){
     $("#stepsTable").colResizable({
       liveDrag: true,
-      // fixed: false,  // if you want table width to change as columns are resized
     });
   });
 </script>
