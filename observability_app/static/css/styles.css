@@ -1,0 +1,49 @@
+/* Use a modern, clean font */
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f8f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+/* Navbar styling enhancements */
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Container max-width for a spacious layout */
+.container {
+  max-width: 1500px;
+}
+
+/* Card enhancements for dashboards and data display */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+}
+
+/* Table styling for a clean data presentation */
+.table {
+  background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+  padding: 0.75rem;
+}
+
+/* Headings color */
+h1, h2, h3 {
+  color: #333333;
+}
+
+/* Add spacing between sections */
+.mt-4, .mb-4 {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+}

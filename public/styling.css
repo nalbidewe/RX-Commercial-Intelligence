@@ -9,14 +9,3 @@
   body div.relative.hidden.bg-muted.lg\:block img[src*="favicon"] {
     display: none; /* Hide the favicon image */
   }
-  
-  body div.relative.hidden.bg-muted.lg\:block::after {
-    content: "";
-    display: block;
-    position: absolute;
-    inset: 0;
-    background-image: url('/../public/rx_plane.jpeg'); /* Path to the new image */
-    background-size: cover;
-    background-position: center;
-    filter: none !important; 
-  }

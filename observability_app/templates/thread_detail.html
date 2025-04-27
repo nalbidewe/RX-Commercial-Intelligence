@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Thread Detail</h1>
+<p><strong>ID:</strong> {{ thread.id }}</p>
+<p><strong>Name:</strong> {{ thread.name or 'N/A' }}</p>
+<p><strong>Created At:</strong> {{ thread.createdAt }}</p>
+
+<h2>Steps</h2>
+<table class="table table-bordered" id="stepsTable">
+  <thead>
+    <tr>
+      <th style="width: 120px;">ID</th>
+      <th style="width: 150px;">Name</th>
+      <th style="width: 120px;">Type</th>
+      <th style="width: 180px;">Start Time</th>
+      <th style="width: 180px;">End Time</th>
+      <th style="width: 250px;">Input</th>
+      <th style="width: 300px;">Output (Markdown)</th>
+      <th style="width: 300px;">Feedback</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for step in steps %}
+      <tr>
+        <td>{{ step.id }}</td>
+        <td>{{ step.name or 'N/A' }}</td>
+        <td>{{ step.type }}</td>
+        <td>{{ step.startTime }}</td>
+        <td>{{ step.endTime }}</td>
+        <td>{{ step.input }}</td>
+        <!-- Render Markdown in output -->
+        <td>{{ step.output|markdown|safe }}</td>
+        <td>
+          {% if step.feedbacks %}
+            {% for fb in step.feedbacks %}
+              <strong>{{ fb.name }}</strong>: {{ fb.value }}{% if fb.comment %} ({{ fb.comment }}){% endif %}
+              {% if not loop.last %} | {% endif %}
+            {% endfor %}
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<!-- Include jQuery if not already included -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+<!-- colResizable plugin -->
+<script src="https://cdn.jsdelivr.net/gh/alvaro-prieto/colResizable@1.6/colResizable-1.6.min.js"></script>
+
+<script>
+  // Make the columns in #stepsTable resizable
+  $(document).ready(function(){
+    $("#stepsTable").colResizable({
+      liveDrag: true,
+      // fixed: false,  // if you want table width to change as columns are resized
+    });
+  });
+</script>
+{% endblock %}

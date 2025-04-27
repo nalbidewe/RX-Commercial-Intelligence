@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.cool-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+  cursor: pointer;
+}
+.cool-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+</style>
+<div class="d-flex justify-content-center align-items-center" style="height: 70vh;">
+  <div class="row g-3">
+    <!-- Threads Card -->
+    <div class="col d-flex justify-content-center">
+      
+      <div
+        class="card cool-card text-white bg-primary"
+        style="width: 180px; height: 180px;"
+        onclick="animateAndRedirect(this, '/threads')"
+      >
+        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+          <h5 class="card-title mb-2">Threads</h5>
+          <p class="card-text fs-2">{{ thread_count }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Card -->
+    <div class="col d-flex justify-content-center">
+      <div
+        class="card cool-card text-white bg-success"
+        style="width: 180px; height: 180px;"
+        onclick="animateAndRedirect(this, '/users')"
+      >
+        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+          <h5 class="card-title mb-2">Users</h5>
+          <p class="card-text fs-2">{{ user_count }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Runs Card -->
+    <div class="col d-flex justify-content-center">
+      <div
+        class="card cool-card text-white bg-warning"
+        style="width: 180px; height: 180px;"
+        onclick="animateAndRedirect(this, '#')"
+      >
+        <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+          <h5 class="card-title mb-2">Runs</h5>
+          <p class="card-text fs-2">{{ run_count }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function animateAndRedirect(card, url) {
+  // Apply a quick animation then redirect
+  card.style.transform = 'scale(0.9)';
+  setTimeout(function() {
+    window.location.href = url;
+  }, 200);
+}
+</script>
+{% endblock %}
