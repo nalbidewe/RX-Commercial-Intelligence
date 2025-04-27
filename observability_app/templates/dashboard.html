@@ -1,34 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Dashboard</h1>
-<div class="row">
+<h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
+<div class="row mb-4">
   <div class="col-md-4">
-    <div class="card text-white bg-primary mb-3">
-      <div class="card-body">
+    <div class="card text-white bg-primary mb-3 shadow-lg">
+      <div class="card-body text-center">
+        <i class="bi bi-chat-dots-fill fs-2 mb-2"></i>
         <h5 class="card-title">Threads</h5>
-        <p class="card-text">{{ thread_count }}</p>
+        <p class="card-text fs-2">{{ thread_count }}</p>
       </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card text-white bg-success mb-3">
-      <div class="card-body">
+    <div class="card text-white bg-success mb-3 shadow-lg">
+      <div class="card-body text-center">
+        <i class="bi bi-people-fill fs-2 mb-2"></i>
         <h5 class="card-title">Users</h5>
-        <p class="card-text">{{ user_count }}</p>
+        <p class="card-text fs-2">{{ user_count }}</p>
       </div>
     </div>
   </div>
   <div class="col-md-4">
-    <div class="card text-white bg-warning mb-3">
-      <div class="card-body">
+    <div class="card text-white bg-warning mb-3 shadow-lg">
+      <div class="card-body text-center">
+        <i class="bi bi-rocket-takeoff-fill fs-2 mb-2"></i>
         <h5 class="card-title">Runs</h5>
-        <p class="card-text">{{ run_count }}</p>
+        <p class="card-text fs-2">{{ run_count }}</p>
       </div>
     </div>
   </div>
 </div>
-<h2>Recent Runs</h2>
-<canvas id="runsChart"></canvas>
+<h2 class="mb-3"><i class="bi bi-graph-up-arrow"></i> Recent Runs</h2>
+<canvas id="runsChart" style="background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.06);"></canvas>
 {% endblock %}
 
 {% block scripts %}

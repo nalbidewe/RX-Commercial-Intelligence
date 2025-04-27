@@ -12,10 +12,8 @@ import json
 import logging
 import base64
 import io
-
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
-
 from langchain_openai import AzureChatOpenAI
 import tiktoken # For token counting
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -627,11 +625,11 @@ async def chat_profile(current_user: cl.User):
             markdown_description="Generate Lifecycle content for Riyadh Air.",
             icon="/public/lifecycle.svg"
         ),
-        # cl.ChatProfile(
-        #     name="RX Policy Generation",
-        #     markdown_description="Generate policy documents for Riyadh Air.",
-        #     icon="/public/policy.svg"
-        # ),
+        cl.ChatProfile(
+            name="RX Policy Generation",
+            markdown_description="Generate policy documents for Riyadh Air.",
+            icon="/public/policy.svg"
+        ),
         cl.ChatProfile(
             name="Content Refinement",
             markdown_description="Refine existing content for Riyadh Air.",
@@ -645,7 +643,6 @@ async def chat_profile(current_user: cl.User):
                 ),
             ]
         ),
-
         cl.ChatProfile(
             name="Content Translation",
             markdown_description="Translate existing Riyadh Air content to arabic.",
@@ -955,7 +952,8 @@ async def on_submit_selections(action: cl.Action):
         except Exception as e:
             logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Web/App content: {e}")
             if attempt == max_retries - 1: # If last retry failed
-                await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts. Please try again later.")
+                msg_contentgen.content = f"Sorry, I encountered an error after {max_retries} attempts. Please try again later."
+                await msg_contentgen.update()
             # Optional: Add a small delay before retrying
             # await cl.sleep(1) # Requires `import chainlit as cl` if not already done
 
@@ -1070,7 +1068,8 @@ async def on_submit_lifecycle_selections(action: cl.Action):
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Lifecycle content: {e}")
                 if attempt == max_retries - 1:
-                    await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts generating lifecycle content. Please try again later.")
+                    msg_contentgen.content = f"Sorry, I encountered an error after {max_retries} attempts generating lifecycle content. Please try again later."
+                    await msg_contentgen.update()
                 # await cl.sleep(1)
 
     except Exception as e:
@@ -1156,7 +1155,8 @@ async def on_message(message: cl.Message):
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Web/App content: {e}")
                 if attempt == max_retries - 1:
-                    await msg_contentgen.update(content=f"Sorry, I encountered an error after {max_retries} attempts. Please try again later.")
+                    msg_contentgen.content = f"Sorry, I encountered an error after {max_retries} attempts. Please try again later."
+                    await msg_contentgen.update()
                 # await cl.sleep(1)
 
     # --- Content Refinement Interaction ---
@@ -1231,7 +1231,8 @@ async def on_message(message: cl.Message):
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Content Refinement: {e}")
                 if attempt == max_retries - 1:
-                    await msg_copywriter.update(content=f"Sorry, I encountered an error after {max_retries} attempts refining content. Please try again later.")
+                    msg_copywriter.content = f"Sorry, I encountered an error after {max_retries} attempts refining content. Please try again later."
+                    await msg_copywriter.update()
                 # await cl.sleep(1)
     
     # --- Arabic Content Translation Interaction ---

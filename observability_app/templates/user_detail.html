@@ -1,18 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>User Detail</h1>
-<p><strong>ID:</strong> {{ user.id }}</p>
-<p><strong>Identifier:</strong> {{ user.identifier }}</p>
-<p><strong>Created At:</strong> {{ user.createdAt }}</p>
-
-<h2>Threads</h2>
+<h1><i class="bi bi-person-badge"></i> User Detail</h1>
+<div class="card p-4 mb-4 shadow-lg">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-hash"></i> ID:</span> {{ user.id }}
+    </div>
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-person"></i> Identifier:</span> {{ user.identifier }}
+    </div>
+    <div class="col-md-4">
+      <span class="fw-bold"><i class="bi bi-calendar-event"></i> Created At:</span> {{ user.createdAt }}
+    </div>
+  </div>
+</div>
+<h2 class="mt-4"><i class="bi bi-chat-dots"></i> Threads</h2>
 {% if user.threads %}
-  <ul>
+  <ul class="list-group list-group-flush mb-4">
     {% for thread in user.threads %}
-      <li><a href="/thread/{{ thread.id }}">{{ thread.name or thread.id }}</a></li>
+      <li class="list-group-item d-flex align-items-center">
+        <i class="bi bi-diagram-3-fill text-primary me-2"></i>
+        <a href="/thread/{{ thread.id }}" class="fw-bold text-decoration-none">{{ thread.name or thread.id }}</a>
+      </li>
     {% endfor %}
   </ul>
 {% else %}
-  <p>No threads available.</p>
+  <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> No threads available.</div>
 {% endif %}
 {% endblock %}
