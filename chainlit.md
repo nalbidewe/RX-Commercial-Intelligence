@@ -41,3 +41,10 @@ This document tracks the version history of the AI Content Gen App
     - Updated OpenAI models to the new **GPT-4.1** for improved performance and accuracy.
     - Implemented **right-to-left (RTL) direction flow** and **right alignment** for Arabic text in the UI.
     - Enhanced **Arabic translation quality** for more natural and contextually accurate outputs.
+
+## v1.2 - RX Policy Tool, Production Rollout & SSO
+- **Release Date:** 2025-04-30
+- **Notes:**
+    - Added **RX Policy Generation Tool** for automated policy content creation.
+    - Rolled out the app to **production environment** with **private network integration**; access now requires **Zscaler**.
+    - Authentication now fully uses **Microsoft Entra SSO**; **custom username and password** login removed.
