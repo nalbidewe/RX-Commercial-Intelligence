@@ -29,7 +29,7 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, migration_message
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
@@ -619,44 +619,50 @@ async def chat_profile(current_user: cl.User):
             name="Web & App Content Creation",
             markdown_description="Generate Web & App content for Riyadh Air.",
             icon="/public/content.svg", # Icon displayed in the UI
-        ),
-         cl.ChatProfile(
-            name="Lifecycle Content Creation",
-            markdown_description="Generate Lifecycle content for Riyadh Air.",
-            icon="/public/lifecycle.svg"
-        ),
-        cl.ChatProfile(
-            name="RX Policy Generation",
-            markdown_description="Generate policy documents for Riyadh Air.",
-            icon="/public/policy.svg"
-        ),
-        cl.ChatProfile(
-            name="Content Refinement",
-            markdown_description="Refine existing content for Riyadh Air.",
-            icon="/public/refine.svg",
-            # Define starter prompts for this profile
-            starters=[
-                cl.Starter(
-                    label="Usage Instructions",
-                    message="How can I use this tool?",
-                    icon="/public/help.svg",
-                ),
-            ]
-        ),
-        cl.ChatProfile(
-            name="Content Translation",
-            markdown_description="Translate existing Riyadh Air content to arabic.",
-            icon="/public/translator.svg",
-            # Define starter prompts for this profile
-            starters=[
-                cl.Starter(
-                    label="Usage Instructions",
-                    message="How can I use this tool?",
-                    icon="/public/help.svg",
-                ),
-            ]
-        )
-    ]
+        )]
+    # return [
+    #     cl.ChatProfile(
+    #         name="Web & App Content Creation",
+    #         markdown_description="Generate Web & App content for Riyadh Air.",
+    #         icon="/public/content.svg", # Icon displayed in the UI
+    #     ),
+    #      cl.ChatProfile(
+    #         name="Lifecycle Content Creation",
+    #         markdown_description="Generate Lifecycle content for Riyadh Air.",
+    #         icon="/public/lifecycle.svg"
+    #     ),
+    #     cl.ChatProfile(
+    #         name="RX Policy Generation",
+    #         markdown_description="Generate policy documents for Riyadh Air.",
+    #         icon="/public/policy.svg"
+    #     ),
+    #     cl.ChatProfile(
+    #         name="Content Refinement",
+    #         markdown_description="Refine existing content for Riyadh Air.",
+    #         icon="/public/refine.svg",
+    #         # Define starter prompts for this profile
+    #         starters=[
+    #             cl.Starter(
+    #                 label="Usage Instructions",
+    #                 message="How can I use this tool?",
+    #                 icon="/public/help.svg",
+    #             ),
+    #         ]
+    #     ),
+    #     cl.ChatProfile(
+    #         name="Content Translation",
+    #         markdown_description="Translate existing Riyadh Air content to arabic.",
+    #         icon="/public/translator.svg",
+    #         # Define starter prompts for this profile
+    #         starters=[
+    #             cl.Starter(
+    #                 label="Usage Instructions",
+    #                 message="How can I use this tool?",
+    #                 icon="/public/help.svg",
+    #             ),
+    #         ]
+    #     )
+    # ]
 
 def adjust_template(template_lines, responses):
     """
@@ -704,30 +710,31 @@ async def on_chat_start():
 
     # --- Web & App Content Creation Profile ---
     if chat_profile == "Web & App Content Creation":
-        # Initialize or retrieve the cached chain
-        rx_content_create = rx_content_creator()
-        # Store the chain and an empty chat history in the user session
-        cl.user_session.set("rx_content_creator", rx_content_create)
-        cl.user_session.set("chat_history_content_creator", []) # Initialize history
+        await cl.Message(content=migration_message).send() # Send migration message
+        # # Initialize or retrieve the cached chain
+        # rx_content_create = rx_content_creator()
+        # # Store the chain and an empty chat history in the user session
+        # cl.user_session.set("rx_content_creator", rx_content_create)
+        # cl.user_session.set("chat_history_content_creator", []) # Initialize history
 
-        # Load questions specific to this profile
-        questions = load_questions("utils/questions_generate_webapp.json")
+        # # Load questions specific to this profile
+        # questions = load_questions("utils/questions_generate_webapp.json")
 
-        # Create the custom UI element for displaying questions
-        multi_select_element = cl.CustomElement(
-            name="MultiSelectQuestions", # Matches the frontend component name
-            props={
-                "questions": questions,
-                "submitActionName": "submit_selections", # Action name triggered on submit
-                "enableHierarchy": False # Disable hierarchical display for this profile
-            }
-        )
-        # Create a message containing the form element
-        form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
-        # Store the form message in the session (to remove it later)
-        cl.user_session.set("form_msg", form_msg)
-        # Send the form message to the user
-        await form_msg.send()
+        # # Create the custom UI element for displaying questions
+        # multi_select_element = cl.CustomElement(
+        #     name="MultiSelectQuestions", # Matches the frontend component name
+        #     props={
+        #         "questions": questions,
+        #         "submitActionName": "submit_selections", # Action name triggered on submit
+        #         "enableHierarchy": False # Disable hierarchical display for this profile
+        #     }
+        # )
+        # # Create a message containing the form element
+        # form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
+        # # Store the form message in the session (to remove it later)
+        # cl.user_session.set("form_msg", form_msg)
+        # # Send the form message to the user
+        # await form_msg.send()
 
     # --- Content Refinement Profile ---
     elif chat_profile == "Content Refinement":
