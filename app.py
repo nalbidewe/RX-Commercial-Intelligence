@@ -945,7 +945,9 @@ async def on_submit_selections(action: cl.Action):
                 cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
                 # Finalize the streamed message (though stream_token might handle this)
-                await msg_contentgen.send()
+                msg_contentgen.content = full_msg # Set the final content
+                # Update the message in the UI with the full response
+                await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed response for Web/App content.")
                 return # Exit after successful generation
 
@@ -1043,12 +1045,13 @@ async def on_submit_lifecycle_selections(action: cl.Action):
         }
 
         # Create message object for streaming response
-        msg_contentgen = cl.Message(content="", author="Riyadh Air")
+        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+        await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = ""
+                full_msg = "```html\n" # Initialize the full message with a code fence
                 # Stream the response
                 async for chunk in rx_lifecycle_create.astream(query):
                     await msg_contentgen.stream_token(chunk)
@@ -1061,7 +1064,11 @@ async def on_submit_lifecycle_selections(action: cl.Action):
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                await msg_contentgen.send()
+                # Close the Markdown code fence after streaming
+                await msg_contentgen.stream_token("\n```")
+                full_msg += "\n```" # Append closing code fence to the full message
+                msg_contentgen.content = full_msg # Set the final content
+                await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed response for Lifecycle content.")
                 return # Exit after success
 
@@ -1120,9 +1127,8 @@ async def on_message(message: cl.Message):
         await msg_contentgen.send()
 
         for attempt in range(max_retries):
+            full_msg = ""
             try:
-                full_msg = ""
-                print(language_preference)
                 if language_preference == "Arabic":
                     async for chunk in rx_content_create.astream(query):
                         full_msg += chunk # Accumulate the full response
