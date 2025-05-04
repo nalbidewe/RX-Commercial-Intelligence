@@ -724,7 +724,7 @@ async def on_chat_start():
             name="ToolOverview", # Matches the frontend component name
             props={}
         )
-        overview_msg = cl.Message(content="Welcome! Explore the tools below:", elements=[overview_element], author="Riyadh Air")
+        overview_msg = cl.Message(content="", elements=[overview_element])
         await overview_msg.send()
         return
 
@@ -1179,7 +1179,7 @@ async def on_message(message: cl.Message):
                     chat_history_content_creator.append(HumanMessage(content=user_msg))
                     chat_history_content_creator.append(AIMessage(content=full_msg))
                     cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-                    
+
                     # Finalize the streamed message (though stream_token might handle this)
                     msg_contentgen.content = full_msg # Set the final content
                     # Update the message in the UI with the full response
