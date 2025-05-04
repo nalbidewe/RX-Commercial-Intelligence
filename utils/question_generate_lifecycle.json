@@ -11,6 +11,7 @@
       ],
       "abbrev": "content_type",
       "mandatory": true,
+      "description": "Select the main communication channel or format for your message (e.g., email, push notification, SMS, or other).",
       "sub_questions": {
         "Email": [
           {
@@ -20,10 +21,10 @@
               "Transactional Email (e.g., order confirmation, cancellation, OTP, etc.)",
               "Marketing Email / Newsletter",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "email_type",
             "mandatory": true,
+            "description": "Specify whether the email is for a transaction (like confirmations or OTPs) or for marketing/newsletter purposes.",
             "sub_questions": {
               "Transactional Email (e.g., order confirmation, cancellation, OTP, etc.)": [
                 {
@@ -41,10 +42,10 @@
                     "Feedback & Survey Invitation",
                     "Tax Invoice & Payment Receipt",
                     "Other (Enter your own)"
-                
                   ],
                   "abbrev": "content_purpose",
-                  "mandatory": true
+                  "mandatory": true,
+                  "description": "Describe the primary purpose of this transactional email (e.g., booking confirmation, payment reminder, etc.)."
                 }
               ],
               "Marketing Email / Newsletter": [
@@ -56,10 +57,10 @@
                     "Share brand news",
                     "Share travel tips",
                     "Other (Enter your own)"
-                
                   ],
                   "abbrev": "content_purpose",
-                  "mandatory": true
+                  "mandatory": true,
+                  "description": "Describe the main goal of this marketing email or newsletter (e.g., promotion, brand news, travel tips, etc.)."
                 }
               ]
             }
@@ -70,10 +71,10 @@
             "value": [
               "Include Subject Line, Preview Text, Greeting, Detailed Body, CTA Button, and Footer",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "email_structure",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Choose the layout and elements to include in your email (e.g., subject, greeting, body, CTA, footer)."
           },
           {
             "question": "What layout do you prefer for your email?",
@@ -82,10 +83,10 @@
               "1-Column (mobile-optimized)",
               "2-Column (desktop-friendly)",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "email_layout",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Select the preferred layout for your email, such as single-column or two-column format."
           }
         ],
         "Push Notification": [
@@ -96,10 +97,10 @@
               "Alert about order status or updates",
               "Announce promotions or special offers",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "content_purpose",
-            "mandatory": true
+            "mandatory": true,
+            "description": "State the main reason for sending this push notification (e.g., alert, promotion, update, etc.)."
           },
           {
             "question": "Select the structure for your push notification:",
@@ -107,10 +108,10 @@
             "value": [
               "Include Title (optional), Message (up to 100 characters), CTA Button/Tag (optional)",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "push_structure",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Choose the elements to include in your push notification (e.g., title, message, CTA)."
           }
         ],
         "SMS (Text message)": [
@@ -121,10 +122,10 @@
               "Notify order status or send OTP/payment link",
               "Announce promotions or special offers",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "content_purpose",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Describe the main purpose of this SMS (e.g., notify status, send OTP, announce promotion, etc.)."
           },
           {
             "question": "Select the structure for your SMS:",
@@ -132,10 +133,10 @@
             "value": [
               "Include a single message (max 160 characters)",
               "Other (Enter your own)"
-          
             ],
             "abbrev": "sms_structure",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Choose the format for your SMS, such as a single concise message."
           }
         ],
         "Other": [
@@ -143,7 +144,8 @@
             "question": "Please specify the structure for your content:",
             "type": "text",
             "abbrev": "other_structure",
-            "mandatory": true
+            "mandatory": true,
+            "description": "Provide details about the structure or format you want for your custom content type."
           }
         ]
       }
@@ -157,24 +159,26 @@
         "Investors",
         "Media/Press",
         "Other (Enter your own)"
-    
       ],
       "abbrev": "target_audience",
-      "mandatory": true
+      "mandatory": true,
+      "description": "Indicate who will receive or read this content (e.g., customers, clients, investors, media, etc.)."
     },
     {
       "question": "Additional context or instructions for the model: (If any)",
       "type": "text",
       "value": ["Yes, add additional info"],
       "abbrev": "additional_instructions",
-      "mandatory": false
+      "mandatory": false,
+      "description": "Add any extra information or special instructions to help generate the content as you need."
     },
     {
       "question": "Would you like to attach a supporting document? (If any)",
       "type": "attachment",
       "value": ["Yes, add additional info"],
       "abbrev": "attached_document",
-      "mandatory": false
+      "mandatory": false,
+      "description": "Upload any relevant files that should be considered when generating the content."
     }
   ]
 }

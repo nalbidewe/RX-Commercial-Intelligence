@@ -48,3 +48,10 @@ This document tracks the version history of the AI Content Gen App
     - Added **RX Policy Generation Tool** for automated policy content creation.
     - Rolled out the app to **production environment** with **private network integration**; access now requires **Zscaler**.
     - Authentication now fully uses **Microsoft Entra SSO**; **custom username and password** login removed.
+
+## v1.3 - Home Landing Page, Dynamic Textarea & Info Tooltips
+- **Release Date:** 2025-05-04
+- **Notes:**
+    - Added a new **home landing page** to improve user onboarding and navigation.
+    - Introduced a **dynamic textarea** that automatically expands as users type, enhancing the content creation experience.
+    - Added **info tooltips** to questions, providing users with helpful descriptions and guidance for each question.
