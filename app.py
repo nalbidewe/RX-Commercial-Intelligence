@@ -1179,8 +1179,11 @@ async def on_message(message: cl.Message):
                     chat_history_content_creator.append(HumanMessage(content=user_msg))
                     chat_history_content_creator.append(AIMessage(content=full_msg))
                     cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
-
-                    await msg_contentgen.send()
+                    
+                    # Finalize the streamed message (though stream_token might handle this)
+                    msg_contentgen.content = full_msg # Set the final content
+                    # Update the message in the UI with the full response
+                    await msg_contentgen.update() # Update the message in the UI
                     logging.info("Successfully generated and streamed follow-up response for Web/App content.")
                     return # Exit on success
 
