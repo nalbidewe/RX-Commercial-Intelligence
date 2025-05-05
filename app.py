@@ -317,6 +317,8 @@ def _process_question_recursive(question_data):
             "options": details.get("value", []),
             "selected": "",
             "isOther": False,
+            # Add description if present
+            "description": details.get("description", ""),
             # Recursively process sub_questions if they exist
             "subQuestions": {} # Initialize as empty dict
         }
@@ -658,23 +660,36 @@ async def chat_profile(current_user: cl.User):
     user_role = current_user.metadata.get("role") # Get user role
     return [
         cl.ChatProfile(
+            name="Welcome / Tool Overview",
+            markdown_description="Learn about the 5 content generation tools available in this app and how to use the tool picker to get started.",
+            icon="/public/help.svg",
+            starters=[
+                cl.Starter(
+                    label="How do I use this app?",
+                    message="Show me an overview of the available tools and how to select them.",
+                    icon="/public/help.svg",
+                ),
+            ],
+            default=True # Set this profile as the default
+        ),
+        cl.ChatProfile(
             name="Web & App Content Creation",
-            markdown_description="Generate Web & App content for Riyadh Air.",
+            markdown_description="Generate engaging and tailored website and application content for Riyadh Air, including landing pages, feature descriptions, and user interface text.",
             icon="/public/content.svg", # Icon displayed in the UI
         ),
-         cl.ChatProfile(
+        cl.ChatProfile(
             name="Lifecycle Content Creation",
-            markdown_description="Generate Lifecycle content for Riyadh Air.",
+            markdown_description="Create comprehensive lifecycle content for Riyadh Air, such as onboarding flows, customer journey communications, and process documentation.",
             icon="/public/lifecycle.svg"
         ),
         cl.ChatProfile(
             name="RX Policy Generation",
-            markdown_description="Generate policy documents for Riyadh Air.",
+            markdown_description="Draft, review, and generate policy documents and regulatory content for Riyadh Air, ensuring compliance and clarity.",
             icon="/public/policy.svg"
         ),
         cl.ChatProfile(
             name="Content Refinement",
-            markdown_description="Refine existing content for Riyadh Air.",
+            markdown_description="Polish, edit, and enhance existing content for Riyadh Air to improve clarity, tone, and effectiveness.",
             icon="/public/refine.svg",
             # Define starter prompts for this profile
             starters=[
@@ -687,7 +702,7 @@ async def chat_profile(current_user: cl.User):
         ),
         cl.ChatProfile(
             name="Content Translation",
-            markdown_description="Translate existing Riyadh Air content to arabic.",
+            markdown_description="Translate Riyadh Air's content into modern standard Arabic, maintaining brand voice and cultural relevance.",
             icon="/public/translator.svg",
             # Define starter prompts for this profile
             starters=[
@@ -744,8 +759,19 @@ async def on_chat_start():
     chat_profile = cl.user_session.get("chat_profile")
     logging.info(f"Chat started with profile: {chat_profile}")
 
+    # --- Welcome / Tool Overview Profile ---
+    if chat_profile == "Welcome / Tool Overview":
+        # Show the custom landing page element
+        overview_element = cl.CustomElement(
+            name="ToolOverview", # Matches the frontend component name
+            props={}
+        )
+        overview_msg = cl.Message(content="", elements=[overview_element])
+        await overview_msg.send()
+        return
+
     # --- Web & App Content Creation Profile ---
-    if chat_profile == "Web & App Content Creation":
+    elif chat_profile == "Web & App Content Creation":
         # Initialize or retrieve the cached chain
         rx_content_create = rx_content_creator()
         # Store the chain and an empty chat history in the user session
@@ -1196,7 +1222,10 @@ async def on_message(message: cl.Message):
                     chat_history_content_creator.append(AIMessage(content=full_msg))
                     cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-                    await msg_contentgen.send()
+                    # Finalize the streamed message (though stream_token might handle this)
+                    msg_contentgen.content = full_msg # Set the final content
+                    # Update the message in the UI with the full response
+                    await msg_contentgen.update() # Update the message in the UI
                     logging.info("Successfully generated and streamed follow-up response for Web/App content.")
                     return # Exit on success
 

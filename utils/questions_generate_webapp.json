@@ -12,7 +12,8 @@
             "Other (Enter your own)"
         ],
         "abbrev": "content_type",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Select the main format or channel for the content you want to generate (e.g., article, blog post, email, etc.)."
     },
     "What is the purpose of this content?": {
         "type": "options",
@@ -24,7 +25,8 @@
             "Other (Enter your own)"
         ],
         "abbrev": "content_purpose",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Specify the main goal or objective for this content (e.g., introduce the airline, highlight leadership, etc.)."
     },
     "Who is the target audience for this content?": {
         "type": "options",
@@ -35,7 +37,8 @@
             "Other (Enter your own)"
         ],
         "abbrev": "target_audience",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Indicate who the intended readers or recipients of this content are."
     },
     "What is the key message of this content?": {
         "type": "options",
@@ -49,7 +52,8 @@
             "Other (Enter your own)"
         ],
         "abbrev": "key_message",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Summarize the primary message or takeaway you want to communicate."
     },
     "What platform is this content intended for?": {
         "type": "options",
@@ -59,7 +63,8 @@
             "Other (Enter your own)"
         ],
         "abbrev": "content_platform",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Choose the platform where this content will be published or used (e.g., website, app)."
     },
     "What is your desired content length?": {
         "type": "options",
@@ -71,27 +76,31 @@
             "Other (Enter your own)"
         ],
         "abbrev": "content_length",
-        "mandatory": true
+        "mandatory": true,
+        "description": "Select how long or detailed you want the content to be."
     },
     "Which language(s) would you like the content in?": {
-    "type": "options",
-    "value": [
-        "English",
-        "Arabic"
+        "type": "options",
+        "value": [
+            "English",
+            "Arabic"
         ],
-    "abbrev": "language_preference",
-    "mandatory": true
+        "abbrev": "language_preference",
+        "mandatory": true,
+        "description": "Choose the language(s) in which the content should be written."
     },
     "Additional context or instructions for the model: (If any)": {
         "type": "text",
         "value": ["Yes, add additional info"],
         "abbrev": "additional_instructions",
-        "mandatory": false
+        "mandatory": false,
+        "description": "Provide any extra information or special instructions for generating the content."
     },
     "Would you like to attach a supporting document? (If any)": {
         "type": "attachment",
         "value": ["Yes, add additional info"],
         "abbrev": "attached_document",
-        "mandatory": false
+        "mandatory": false,
+        "description": "Upload any relevant files that should be considered when generating the content."
     }
 }
