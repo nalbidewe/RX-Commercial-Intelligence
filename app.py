@@ -1524,4 +1524,9 @@ async def on_message(message: cl.Message):
     else:
         # Handle cases where the chat profile is unknown or not set
         logging.error(f"Received message but chat profile '{chat_profile}' is not recognized or handled.")
-        await cl.Message(content="Sorry, I'm not sure how to handle this request in the current mode. Please select a valid chat profile.").send()
+        # Send a message with an image element to inform the user how to select a chat profile
+        image_element = cl.Image(name="Tool Selection Guide", display="inline", path="public/tool_selection.png")
+        await cl.Message(
+            content="Sorry, I'm not sure how to handle this request in the current mode. Please select a valid chat profile using the tool picker in the upper left corner.",
+            elements=[image_element]
+        ).send()
