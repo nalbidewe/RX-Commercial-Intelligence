@@ -55,7 +55,7 @@ export default function ToolOverview() {
                 <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
                   {/* Removed video camera icon */}
                 </div>
-                <div className="mb-2 text-base font-semibold text-purple-700 dark:text-purple-200">Get started in under 3 minutes!</div>
+                <div className="mb-2 text-base font-semibold text-purple-700 dark:text-purple-200">Get started in under 4 minutes!</div>
                 <video
                   className="rounded-xl shadow-2xl border-4 border-blue-300 dark:border-blue-800 max-w-full w-[350px] md:w-[500px] transition-transform hover:scale-105 hover:shadow-pink-200"
                   controls

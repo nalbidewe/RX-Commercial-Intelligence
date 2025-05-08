@@ -55,3 +55,8 @@ This document tracks the version history of the AI Content Gen App
     - Added a new **home landing page** to improve user onboarding and navigation.
     - Introduced a **dynamic textarea** that automatically expands as users type, enhancing the content creation experience.
     - Added **info tooltips** to questions, providing users with helpful descriptions and guidance for each question.
+
+## v1.4 - Tone of Voice Selection
+- **Release Date:** 2025-05-08
+- **Notes:**
+    - Introduced **tone of voice selection** allowing users to choose between the default Riyadh Air corporate TOV or a new marketing/sales focused TOV aimed at upselling and enticing sales.
