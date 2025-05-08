@@ -55,6 +55,16 @@
         "mandatory": true,
         "description": "Summarize the primary message or takeaway you want to communicate."
     },
+    "What tone of voice should be used for this content?": {
+        "type": "options",
+        "value": [
+            "Default Riyadh Air Tone of Voice",
+            "Marketing/Sales Focused Tone of Voice"
+        ],
+        "abbrev": "tone_of_voice",
+        "mandatory": true,
+        "description": "Select the desired tone of voice. 'Default' is for general corporate content. 'Marketing/Sales' is for content aiming to promote or sell."
+    },
     "What platform is this content intended for?": {
         "type": "options",
         "value": [
