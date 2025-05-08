@@ -31,11 +31,12 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     SYSTEM_LIFECYCLE_PROMPT,
+    MARKETING_SYSTEM_LIFECYCLE_PROMPT,
     EMAIL_TEMPLATE
 )
 from utils.prompt_rx_policy import RX_POLICY_SYS_MSG, welcome_message
@@ -416,23 +417,20 @@ def extract_text_from_file_data(file_data):
         return ""
 
 @cl.cache # Cache the initialized chain for performance
-def rx_content_creator(sys_msg: str = CONTENT_GEN_SYS_PROMPT):
+def rx_content_creator():
     """
     Initializes and returns a Langchain Runnable sequence (chain) for
     Web & App content creation.
 
-    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt.
+    Uses AzureChatOpenAI (gpt-4o). The system prompt is passed dynamically during invocation.
 
-    Args:
-        sys_msg (str): The system prompt to configure the LLM. Defaults to
-                       CONTENT_GEN_SYS_PROMPT from utils.
 
     Returns:
         Runnable: The initialized Langchain chain.
     """
     # Define the prompt template including a placeholder for chat history
     prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_msg),
+        ("system", "{sys_msg}"), # System prompt provided at runtime
         MessagesPlaceholder(variable_name="chat_history"),
         ("user", "{input}") # Placeholder for user input
     ])
@@ -965,6 +963,16 @@ async def on_submit_selections(action: cl.Action):
     cl.user_session.set("language_preference", language_preference)
     logging.info(f"Language selected: {language_preference}")
 
+    # Determine which system prompt to use based on tone of voice selection
+    tone_of_voice = mapping.get("tone_of_voice", "Default Riyadh Air Tone of Voice")
+    selected_sys_prompt = CONTENT_GEN_SYS_PROMPT
+    if tone_of_voice == "Marketing/Sales Focused Tone of Voice":
+        selected_sys_prompt = MARKETING_CONTENT_GEN_SYS_PROMPT
+        logging.info("Using Marketing/Sales Focused Tone of Voice for Web/App content.")
+    else:
+        logging.info("Using Default Riyadh Air Tone of Voice for Web/App content.")
+
+
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
@@ -976,7 +984,7 @@ async def on_submit_selections(action: cl.Action):
     chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
 
     # Prepare the query for the Langchain chain
-    query = {"chat_history": chat_history_content_creator, "input": filled_prompt}
+    query = {"sys_msg": selected_sys_prompt, "chat_history": chat_history_content_creator, "input": filled_prompt}
 
     # Create a message object to stream the LLM response into
     msg_contentgen = cl.Message(content="", author="Riyadh Air")
@@ -1098,8 +1106,18 @@ async def on_submit_lifecycle_selections(action: cl.Action):
             prompt_email_template_addition = f"\n\n--- Relevant Email Template for '{selected_purpose}' ---\n{email_template}\n--- End of Email Template ---"
             logging.info(f"Adding email template for purpose: {selected_purpose}")
 
+        # Determine which base system prompt to use based on tone of voice selection
+        tone_of_voice = user_responses.get("tone_of_voice", "Default Riyadh Air Tone of Voice")
+        base_system_prompt = SYSTEM_LIFECYCLE_PROMPT
+        if tone_of_voice == "Marketing/Sales Focused Tone of Voice":
+            base_system_prompt = MARKETING_SYSTEM_LIFECYCLE_PROMPT
+            logging.info("Using Marketing/Sales Focused Tone of Voice for Lifecycle content.")
+        else:
+            logging.info("Using Default Riyadh Air Tone of Voice for Lifecycle content.")
+
         # Combine the base system prompt with the potential email template addition
-        final_system_prompt = SYSTEM_LIFECYCLE_PROMPT + prompt_email_template_addition
+        final_system_prompt = base_system_prompt + prompt_email_template_addition
+        cl.user_session.set("lifecycle_sys_prompt", final_system_prompt) # Store for follow-up
 
         # Retrieve the chain and chat history
         rx_lifecycle_create = cl.user_session.get("rx_lifecycle_creator")
@@ -1177,12 +1195,14 @@ async def on_message(message: cl.Message):
         chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
         # Check if the initial form was submitted (history should not be empty)
         if not chat_history_content_creator:
-            logging.warning("Received follow-up message in Web/App profile before initial form submission.")
-            await cl.Message(content="Please fill and submit the questions above to start generating content.").send()
+            await cl.Message(content="It seems the initial form was not submitted. Please start by selecting the 'Web & App Content Creation' profile again if needed.").send()
             return
 
+        # Retrieve the system prompt for follow-up
+        selected_sys_prompt = cl.user_session.get("web_app_sys_prompt", CONTENT_GEN_SYS_PROMPT) # Default if not found
+
         # Prepare query and config for the chain
-        query = {"chat_history": chat_history_content_creator, "input": user_msg}
+        query = {"sys_msg": selected_sys_prompt, "chat_history": chat_history_content_creator, "input": user_msg}
         # Config for potential stateful operations (though memory saver isn't used here)
         config = {"configurable": {"thread_id": message.thread_id}}
 
@@ -1203,31 +1223,31 @@ async def on_message(message: cl.Message):
                         rendered_msg = f'<div style="text-align: right; direction: rtl;">{full_msg}</div>'
                         msg_contentgen.content = rendered_msg # Append chunk to the message UI
                         await msg_contentgen.update() # Update the message in the UI
-                
+                    
                     # Update history
                     chat_history_content_creator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
                     chat_history_content_creator.append(AIMessage(content=full_msg))
                     cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
                     logging.info("Successfully generated and streamed Arabic follow-up for Web/App content.")
                     return # Exit on success
-                        
+                
                 else:
                     # Stream response
                     async for chunk in rx_content_create.astream(query, config=config):
                         await msg_contentgen.stream_token(chunk)
                         full_msg += chunk
 
-                    # Update history
-                    chat_history_content_creator.append(HumanMessage(content=user_msg))
-                    chat_history_content_creator.append(AIMessage(content=full_msg))
-                    cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
+                # Update history
+                chat_history_content_creator.append(HumanMessage(content=user_msg))
+                chat_history_content_creator.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_content_creator", chat_history_content_creator)
 
-                    # Finalize the streamed message (though stream_token might handle this)
-                    msg_contentgen.content = full_msg # Set the final content
-                    # Update the message in the UI with the full response
-                    await msg_contentgen.update() # Update the message in the UI
-                    logging.info("Successfully generated and streamed follow-up response for Web/App content.")
-                    return # Exit on success
+                # Finalize the streamed message (though stream_token might handle this)
+                msg_contentgen.content = full_msg # Set the final content
+                # Update the message in the UI with the full response
+                await msg_contentgen.update() # Update the message in the UI
+                logging.info("Successfully generated and streamed follow-up response for Web/App content.")
+                return # Exit on success
 
             except Exception as e:
                 logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during follow-up LLM call for Web/App content: {e}")
@@ -1374,7 +1394,6 @@ async def on_message(message: cl.Message):
                     msg_translator.content = rendered_msg # Append chunk to the message UI
                     await msg_translator.update() # Update the message in the UI
                     
-
                 # Update history
                 chat_history_translator.append(HumanMessage(content=user_msg)) # User message potentially includes file content
                 chat_history_translator.append(AIMessage(content=full_msg))
@@ -1402,9 +1421,12 @@ async def on_message(message: cl.Message):
         # not necessarily one adjusted with email templates from the initial submission.
         # If context from the initial selections (like email template) is needed for follow-ups,
         # the system prompt logic might need adjustment here or history management.
+        # Retrieve the system prompt used during the form submission for consistency
+        selected_sys_prompt = cl.user_session.get("lifecycle_sys_prompt", SYSTEM_LIFECYCLE_PROMPT) # Default if not found
+
         query = {
             "chat_history": chat_history_lifecycle_creator,
-            "sys_msg": SYSTEM_LIFECYCLE_PROMPT, # Using the base system prompt for follow-ups
+            "sys_msg": selected_sys_prompt, # Using the stored/selected system prompt
             "input": user_msg
         }
         config = {"configurable": {"thread_id": message.thread_id}}

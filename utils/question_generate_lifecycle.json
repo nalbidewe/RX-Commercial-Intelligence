@@ -165,6 +165,17 @@
       "description": "Indicate who will receive or read this content (e.g., customers, clients, investors, media, etc.)."
     },
     {
+      "question": "What tone of voice should be used for this content?",
+      "type": "options",
+      "value": [
+        "Default Riyadh Air Tone of Voice",
+        "Marketing/Sales Focused Tone of Voice"
+      ],
+      "abbrev": "tone_of_voice",
+      "mandatory": true,
+      "description": "Select the desired tone of voice. 'Default' is for general corporate content. 'Marketing/Sales' is for content aiming to promote or sell."
+    },
+    {
       "question": "Additional context or instructions for the model: (If any)",
       "type": "text",
       "value": ["Yes, add additional info"],

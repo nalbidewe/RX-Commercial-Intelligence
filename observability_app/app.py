@@ -67,7 +67,7 @@ def threads():
 def thread_detail(thread_id):
     thread = Thread.query.get_or_404(thread_id)
     # Order steps by startTime or endTime so the display is consistent
-    steps = Step.query.filter_by(threadId=thread_id).order_by(Step.startTime).all()
+    steps = Step.query.filter_by(threadId=thread_id).filter(Step.type.in_(['assistant_message', 'user_message'])).order_by(Step.startTime).all()
     
     return render_template('thread_detail.html', thread=thread, steps=steps)
 
