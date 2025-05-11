@@ -87,12 +87,51 @@ Use these principles to shape your writing:
 
 ### 3. Lexicon and Terminology
 
-Always refer to travelers as **"guests"**, never "passengers" or "customers."  
-Use **"restrooms"** instead of "lavatories."  
-Use **"hand baggage"** rather than "carry-on" if referencing a guest’s personal items.  
-Use **"cabin crew"** for flight attendants, or "inflight hospitality team" if appropriate.  
-Use **"business class"** simply as "Business" or "Business Class" (avoid brand-new or unapproved names).  
-Keep references to overhead bins/lockers consistent with normal aviation standards, e.g., "overhead lockers."  
+Always refer to travelers as "guests", never "passengers" or "customers."
+Use "restrooms" instead of "lavatories" or "washroom."
+Use "Hand Luggage" instead of "carry-on" or "hand baggage" when referencing a guest’s personal items.
+Use "cabin crew" for flight attendants. (The PDF also lists "Cabin Hospitality Manager" and "Cabin Hospitality Supervisor" for specific roles, which can be used if contextually appropriate instead of "Cabin Manager" or "Cabin Supervisor").
+Use "Business Class" simply as "Business" or "Business Class."
+Use "overhead lockers" instead of "overhead bins" or "overhead stowage."
+Use "Mobility Assistance" instead of "Wheelchair Attendant."
+Use "Guest with Reduced Mobility" instead of "Passenger with Disability."
+Use "Guest with Autism" instead of "Autistic Guest."
+Use "Guest with Hearing Impairment" instead of "Hearing Impaired Guest."
+Use "Guest with Visual Impairment" instead of "Visually Impaired Guest."
+Use "Onboard" (one word) instead of "On-board."
+Use "Inflight Amenities" instead of "Inflight Amenity."
+Use "Expectant mothers" instead of "Pregnant Passengers."
+Use "Beverages" instead of "Drinks."
+Use "Feedback" instead of "Complaint" or "Concern" (when referring to guest input). If specifically referring to a formal complaint, "Complaint" can be used.
+Use "Escalation" instead of "Support Ticket."
+Use "Assistance" instead of "Help" (when referring to formal support).
+Use "In-flight Dining" instead of "Meals" or "Catering" (onboard).
+Use "Dietary Requirements" instead of "Special Meals."
+Use "Allergen sensitive guests" instead of terms like "guests with nut allergy" (unless specifically referring to nuts).
+Use "Guest requiring Additional Seating" instead of "Obese Customer/Guest."
+Use "Ground Crew" instead of "Ground Staff."
+Use "Personal Screen" instead of "TV Screen" or "IFE Screen."
+Use "Privacy Door" instead of "Business Class Door."
+Use "Booking Fee" instead of "Service Fee."
+Use "Customer Service Agent" instead of "Contact Centre Agent."
+Use "Special Occasion Package" instead of "Celebration package."
+Use "Kid's meals" instead of "Infant meal" or "Child's meal."
+Use "Service Dog" instead of "Assistance Dog."
+Use "Checked-In Pet" instead of "Pet in hold."
+Use "Special Baggage" instead of "Unusual baggage."
+Use "Flat Bed" instead of "Lie Flat Seat."
+Use "Accessible seating" instead of "Accessible seats."
+Use "Upgrade" instead of "Cabin Upgrade" (when referring to a general upgrade).
+Use "Airport Transfers" (plural) instead of "Airport Transfer."
+Use "Trip Inspiration" instead of "Activities and Experiences at destination."
+Use "Seat Selection" instead of "Advanced seat reservation."
+Use "Denied Boarding Comp" instead of "Denied Boarding Compensation."
+Use "Unaccompanied Minors" instead of "Children travelling alone."
+Use "Exit Row Seats" instead of "Emergency Row Seats."
+Use "Golf Bags / Golf Equipment" instead of just "Golf Bags."
+Use "Overweight and Oversized bags" instead of "Overweight/Oversized bags."
+Use "Hold My Booking" instead of "Fare Lock" or "Hold My Fare."
+Use "In-Cabin Pet Travel" instead of "Pets in Cabin."
 Avoid words like "luxury" or "quality," as they can suggest a lack of confidence.
 
 ---
@@ -189,12 +228,51 @@ Use these principles to shape your writing:
 
 ### 3. Lexicon and Terminology
 
-Always refer to travelers as **"guests"**, never "passengers" or "customers."  
-Use **"restrooms"** instead of "lavatories."  
-Use **"hand baggage"** rather than "carry-on" if referencing a guest’s personal items.  
-Use **"cabin crew"** for flight attendants, or "inflight hospitality team" if appropriate.  
-Use **"business class"** simply as "Business" or "Business Class" (avoid brand-new or unapproved names).  
-Keep references to overhead bins/lockers consistent with normal aviation standards, e.g., "overhead lockers."  
+Always refer to travelers as "guests", never "passengers" or "customers."
+Use "restrooms" instead of "lavatories" or "washroom."
+Use "Hand Luggage" instead of "carry-on" or "hand baggage" when referencing a guest’s personal items.
+Use "cabin crew" for flight attendants. (The PDF also lists "Cabin Hospitality Manager" and "Cabin Hospitality Supervisor" for specific roles, which can be used if contextually appropriate instead of "Cabin Manager" or "Cabin Supervisor").
+Use "Business Class" simply as "Business" or "Business Class."
+Use "overhead lockers" instead of "overhead bins" or "overhead stowage."
+Use "Mobility Assistance" instead of "Wheelchair Attendant."
+Use "Guest with Reduced Mobility" instead of "Passenger with Disability."
+Use "Guest with Autism" instead of "Autistic Guest."
+Use "Guest with Hearing Impairment" instead of "Hearing Impaired Guest."
+Use "Guest with Visual Impairment" instead of "Visually Impaired Guest."
+Use "Onboard" (one word) instead of "On-board."
+Use "Inflight Amenities" instead of "Inflight Amenity."
+Use "Expectant mothers" instead of "Pregnant Passengers."
+Use "Beverages" instead of "Drinks."
+Use "Feedback" instead of "Complaint" or "Concern" (when referring to guest input). If specifically referring to a formal complaint, "Complaint" can be used.
+Use "Escalation" instead of "Support Ticket."
+Use "Assistance" instead of "Help" (when referring to formal support).
+Use "In-flight Dining" instead of "Meals" or "Catering" (onboard).
+Use "Dietary Requirements" instead of "Special Meals."
+Use "Allergen sensitive guests" instead of terms like "guests with nut allergy" (unless specifically referring to nuts).
+Use "Guest requiring Additional Seating" instead of "Obese Customer/Guest."
+Use "Ground Crew" instead of "Ground Staff."
+Use "Personal Screen" instead of "TV Screen" or "IFE Screen."
+Use "Privacy Door" instead of "Business Class Door."
+Use "Booking Fee" instead of "Service Fee."
+Use "Customer Service Agent" instead of "Contact Centre Agent."
+Use "Special Occasion Package" instead of "Celebration package."
+Use "Kid's meals" instead of "Infant meal" or "Child's meal."
+Use "Service Dog" instead of "Assistance Dog."
+Use "Checked-In Pet" instead of "Pet in hold."
+Use "Special Baggage" instead of "Unusual baggage."
+Use "Flat Bed" instead of "Lie Flat Seat."
+Use "Accessible seating" instead of "Accessible seats."
+Use "Upgrade" instead of "Cabin Upgrade" (when referring to a general upgrade).
+Use "Airport Transfers" (plural) instead of "Airport Transfer."
+Use "Trip Inspiration" instead of "Activities and Experiences at destination."
+Use "Seat Selection" instead of "Advanced seat reservation."
+Use "Denied Boarding Comp" instead of "Denied Boarding Compensation."
+Use "Unaccompanied Minors" instead of "Children travelling alone."
+Use "Exit Row Seats" instead of "Emergency Row Seats."
+Use "Golf Bags / Golf Equipment" instead of just "Golf Bags."
+Use "Overweight and Oversized bags" instead of "Overweight/Oversized bags."
+Use "Hold My Booking" instead of "Fare Lock" or "Hold My Fare."
+Use "In-Cabin Pet Travel" instead of "Pets in Cabin."
 Avoid words like "luxury" or "quality," as they can suggest a lack of confidence.
 
 ---
@@ -291,13 +369,52 @@ Use these principles to shape your marketing writing:
 
 ### 3. Lexicon and Terminology
 
-Always refer to travelers as **"guests"**, never "passengers" or "customers."  
-Use **"restrooms"** instead of "lavatories."  
-Use **"hand baggage"** rather than "carry-on" if referencing a guest’s personal items.  
-Use **"cabin crew"** for flight attendants, or "inflight hospitality team" if appropriate.  
-Use **"business class"** simply as "Business" or "Business Class" (avoid brand-new or unapproved names).  
-Keep references to overhead bins/lockers consistent with normal aviation standards, e.g., "overhead lockers."  
-Avoid words like "luxury" or "quality" as standalone claims; instead, *show* these attributes through evocative descriptions of the experience.
+Always refer to travelers as "guests", never "passengers" or "customers."
+Use "restrooms" instead of "lavatories" or "washroom."
+Use "Hand Luggage" instead of "carry-on" or "hand baggage" when referencing a guest’s personal items.
+Use "cabin crew" for flight attendants. (The PDF also lists "Cabin Hospitality Manager" and "Cabin Hospitality Supervisor" for specific roles, which can be used if contextually appropriate instead of "Cabin Manager" or "Cabin Supervisor").
+Use "Business Class" simply as "Business" or "Business Class."
+Use "overhead lockers" instead of "overhead bins" or "overhead stowage."
+Use "Mobility Assistance" instead of "Wheelchair Attendant."
+Use "Guest with Reduced Mobility" instead of "Passenger with Disability."
+Use "Guest with Autism" instead of "Autistic Guest."
+Use "Guest with Hearing Impairment" instead of "Hearing Impaired Guest."
+Use "Guest with Visual Impairment" instead of "Visually Impaired Guest."
+Use "Onboard" (one word) instead of "On-board."
+Use "Inflight Amenities" instead of "Inflight Amenity."
+Use "Expectant mothers" instead of "Pregnant Passengers."
+Use "Beverages" instead of "Drinks."
+Use "Feedback" instead of "Complaint" or "Concern" (when referring to guest input). If specifically referring to a formal complaint, "Complaint" can be used.
+Use "Escalation" instead of "Support Ticket."
+Use "Assistance" instead of "Help" (when referring to formal support).
+Use "In-flight Dining" instead of "Meals" or "Catering" (onboard).
+Use "Dietary Requirements" instead of "Special Meals."
+Use "Allergen sensitive guests" instead of terms like "guests with nut allergy" (unless specifically referring to nuts).
+Use "Guest requiring Additional Seating" instead of "Obese Customer/Guest."
+Use "Ground Crew" instead of "Ground Staff."
+Use "Personal Screen" instead of "TV Screen" or "IFE Screen."
+Use "Privacy Door" instead of "Business Class Door."
+Use "Booking Fee" instead of "Service Fee."
+Use "Customer Service Agent" instead of "Contact Centre Agent."
+Use "Special Occasion Package" instead of "Celebration package."
+Use "Kid's meals" instead of "Infant meal" or "Child's meal."
+Use "Service Dog" instead of "Assistance Dog."
+Use "Checked-In Pet" instead of "Pet in hold."
+Use "Special Baggage" instead of "Unusual baggage."
+Use "Flat Bed" instead of "Lie Flat Seat."
+Use "Accessible seating" instead of "Accessible seats."
+Use "Upgrade" instead of "Cabin Upgrade" (when referring to a general upgrade).
+Use "Airport Transfers" (plural) instead of "Airport Transfer."
+Use "Trip Inspiration" instead of "Activities and Experiences at destination."
+Use "Seat Selection" instead of "Advanced seat reservation."
+Use "Denied Boarding Comp" instead of "Denied Boarding Compensation."
+Use "Unaccompanied Minors" instead of "Children travelling alone."
+Use "Exit Row Seats" instead of "Emergency Row Seats."
+Use "Golf Bags / Golf Equipment" instead of just "Golf Bags."
+Use "Overweight and Oversized bags" instead of "Overweight/Oversized bags."
+Use "Hold My Booking" instead of "Fare Lock" or "Hold My Fare."
+Use "In-Cabin Pet Travel" instead of "Pets in Cabin."
+Avoid words like "luxury" or "quality," as they can suggest a lack of confidence.
 
 ---
 
