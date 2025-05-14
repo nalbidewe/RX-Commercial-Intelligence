@@ -334,7 +334,7 @@ export default function MultiSelectQuestions() {
             {q.type === "attachment" && (
               <div className="space-y-2">
                 <Label htmlFor={`file-${q.questionId}`} className="cursor-pointer w-full">
-                  <div className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg transition-colors relative
+                  <div className={`flex flex-col items-center justify-center p-1 border-2 border-dashed rounded-lg transition-colors relative
                     ${q.selected ? 'bg-blue-50 border-blue-300' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
                     {q.selected ? (
                       <>
