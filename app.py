@@ -1153,7 +1153,7 @@ async def on_message(message: cl.Message):
         chat_history_content_creator = cl.user_session.get("chat_history_content_creator")
         # Check if the initial form was submitted (history should not be empty)
         if not chat_history_content_creator:
-            await cl.Message(content="It seems the initial form was not submitted. Please start by selecting the 'Web & App Content Creation' profile again if needed.").send()
+            await cl.Message(content="It seems the initial form was not submitted. Please make sure to fill at least one field in the form and hit the 'submit answers' button before you can start chatting with the AI for modifications.").send()
             return
 
         # Retrieve the system prompt for follow-up
@@ -1372,7 +1372,7 @@ async def on_message(message: cl.Message):
         # Check if initial form was submitted
         if not chat_history_lifecycle_creator:
             logging.warning("Received follow-up message in Lifecycle profile before initial form submission.")
-            await cl.Message(content="Please start a new chat or submit the form to generate lifecycle content.").send()
+            await cl.Message(content="It seems the initial form was not submitted. Please make sure to fill at least one field in the form and hit the 'submit answers' button before you can start chatting with the AI for modifications.").send()
             return
 
         # Prepare query - Note: This uses the *original* base system prompt,
@@ -1507,6 +1507,6 @@ async def on_message(message: cl.Message):
         # Send a message with an image element to inform the user how to select a chat profile
         image_element = cl.Image(name="Tool Selection Guide", display="inline", path="public/tool_selection.png")
         await cl.Message(
-            content="Sorry, I'm not sure how to handle this request in the current mode. Please select a valid chat profile using the tool picker in the upper left corner.",
+            content="This is an overview of the tools available. Please select a valid chat profile using the tool picker in the upper left corner.",
             elements=[image_element]
         ).send()
