@@ -29,7 +29,7 @@
         "description": "Specify the main goal or objective for this content (e.g., introduce the airline, highlight leadership, etc.)."
     },
     "Who is the target audience for this content?": {
-        "type": "options",
+        "type": "multi_options",
         "value": [
             "General Public (Guests)",
             "Investor Relations",

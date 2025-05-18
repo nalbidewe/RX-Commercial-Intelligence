@@ -32,7 +32,7 @@ from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
 from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT
-from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT
+from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT, ARABIC_TRANSLATION_WELCOME_MESSAGE
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     SYSTEM_LIFECYCLE_PROMPT,
@@ -701,15 +701,7 @@ async def chat_profile(current_user: cl.User):
         cl.ChatProfile(
             name="Content Translation",
             markdown_description="Translate Riyadh Air's content into modern standard Arabic, maintaining brand voice and cultural relevance.",
-            icon="/public/translator.svg",
-            # Define starter prompts for this profile
-            starters=[
-                cl.Starter(
-                    label="Usage Instructions",
-                    message="How can I use this tool?",
-                    icon="/public/help.svg",
-                ),
-            ]
+            icon="/public/translator.svg"
         )
     ]
 
@@ -849,8 +841,12 @@ async def on_chat_start():
         # Store the chain and an empty chat history
         cl.user_session.set("rx_translation", rx_translation)
         cl.user_session.set("chat_history_translator", []) # Initialize history
-        # No initial form is sent for this profile
-
+        cl.user_session.set("translation_welcome_msg_removed", False) # Initialize flag
+        # Send the welcome message for the translation tool
+        translation_welcome_msg = cl.Message(content=ARABIC_TRANSLATION_WELCOME_MESSAGE, author="Riyadh Air")
+        cl.user_session.set("translation_welcome_msg", translation_welcome_msg)
+        await translation_welcome_msg.send()
+        return
 
 @cl.action_callback("submit_selections") # Decorator for Web/App form submission
 async def on_submit_selections(action: cl.Action):
@@ -876,7 +872,16 @@ async def on_submit_selections(action: cl.Action):
     # Build a mapping: questionId -> answer (only if answer is non-empty)
     mapping = {}
     for q in selections:
-        answer = q.get("selected", "").strip()
+        raw_selected = q.get("selected", "") # Get the raw value first
+        
+        if isinstance(raw_selected, list):
+            # Join list items, ensuring they are strings and stripped. Filter out None.
+            answer = ", ".join(str(item).strip() for item in raw_selected if item is not None).strip()
+        elif isinstance(raw_selected, str):
+            answer = raw_selected.strip()
+        else:
+            answer = "" # Default for None or other unexpected types
+            
         if answer: # Only include questions with answers
             mapping[q["questionId"]] = answer
 
@@ -1060,7 +1065,16 @@ async def on_submit_lifecycle_selections(action: cl.Action):
     user_responses = {}
     file_contents = []
     for q in selections:
-        answer = q.get("selected", "").strip()
+        raw_selected = q.get("selected", "") # Get the raw value first
+
+        if isinstance(raw_selected, list):
+            # Join list items, ensuring they are strings and stripped. Filter out None.
+            answer = ", ".join(str(item).strip() for item in raw_selected if item is not None).strip()
+        elif isinstance(raw_selected, str):
+            answer = raw_selected.strip()
+        else:
+            answer = "" # Default for None or other unexpected types
+            
         if answer:
             user_responses[q["questionId"]] = answer
             # Process associated file if present
@@ -1337,6 +1351,13 @@ async def on_message(message: cl.Message):
         rx_translation = cl.user_session.get("rx_translation")
         chat_history_translator = cl.user_session.get("chat_history_translator")
         config = {"configurable": {"thread_id": message.thread_id}}
+
+        # Remove the initial welcome message if it hasn't been removed yet
+        translation_welcome_msg = cl.user_session.get("translation_welcome_msg")
+        if not cl.user_session.get("translation_welcome_msg_removed") and translation_welcome_msg:
+            await translation_welcome_msg.remove()
+            cl.user_session.set("translation_welcome_msg_removed", True)
+            logging.info("Removed welcome message for Content Translation.")
 
         # Check for file attachments in the message
         if message.elements:
