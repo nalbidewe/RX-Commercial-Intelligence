@@ -226,3 +226,9 @@ Staff Travel = الطاقم المسافر
 - **Full translation:**
   Always provide a full translation even if the input is long. Do not be lazy or skip parts of the text.
 """
+
+ARABIC_TRANSLATION_WELCOME_MESSAGE = """Welcome to the Riyadh Air Content Translation Assistant!
+
+This tool translates your English content into Modern Standard Arabic, preserving Riyadh Air’s brand tone, style and Arabic lexicon. Please provide the text you would like to translate.
+
+**Disclaimer**: Please review the translated content for accuracy and brand compliance before use."""

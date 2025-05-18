@@ -1,14 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // Add Popover imports
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// Add Info icon import
-import { AlertCircle, Upload, FileText, FileIcon, Info } from "lucide-react";
+// Add Info icon import and X for multi-select
+import { AlertCircle, Upload, FileText, FileIcon, Info, X } from "lucide-react"; // Added X
 // Add TooltipProvider import
 import { TooltipProvider } from "@/components/ui/tooltip";
+// Imports for MultiSelect component
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 
 // Helper function to recursively find a question definition by its ID
 // within the initial nested structure (mapped by load_questions).
@@ -31,6 +34,98 @@ const findQuestionDefinition = (questions, targetId) => {
   return null; // Not found in this branch
 };
 
+// Helper function to map question definitions to their state structure
+const mapQuestionToState = (qDef, level = 0, parentId = null, parentValue = null) => ({
+  ...qDef,
+  level,
+  parentId,
+  parentValue,
+  selected: qDef.type === "multi_options" ?
+            (Array.isArray(qDef.selected) ? qDef.selected : []) :
+            (qDef.selected || ""), // Default for non-multi_options
+  isOther: qDef.type === "multi_options" ?
+            (Array.isArray(qDef.selected) && qDef.selected.some(s => s === "Other" || s === "Other (Enter your own)")) : // Correctly check elements for "Other" or "Other (Enter your own)"
+            (qDef.isOther || false), // Default for non-multi_options
+  otherInputValue: qDef.otherInputValue || "", // Initialize for "Other" text in multi_options
+});
+
+// MultiSelect component (adapted from provided example)
+function FancyMultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder = "Select one or more options...",
+}) {
+  const inputRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+
+  const handleUnselect = (optionToRemove) => {
+    onChange(currentSelected.filter((option) => option !== optionToRemove));
+  };
+
+  const currentSelected = Array.isArray(selected) ? selected : [];
+  const selectables = options.filter((option) => !currentSelected.includes(option));
+
+  return (
+    <Command className="overflow-visible bg-transparent">
+      <div className="group border border-input px-3 py-0 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        <div className="flex gap-1 flex-wrap items-center">
+          {currentSelected.map((option) => (
+            <Badge key={option} variant="secondary">
+              {option}
+              <button
+                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onKeyDown={(e) => { if (e.key === "Enter") { handleUnselect(option); } }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onClick={() => handleUnselect(option)}
+                aria-label={`Remove ${option}`}
+              >
+                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              </button>
+            </Badge>
+          ))}
+          <CommandInput
+            ref={inputRef}
+            value={inputValue}
+            onValueChange={setInputValue}
+            onBlur={() => setTimeout(() => setOpen(false), 100)} // Delay to allow click on item
+            onFocus={() => setOpen(true)}
+            placeholder={currentSelected.length > 0 ? "" : placeholder}
+            className="ml-2 bg-transparent outline-none placeholder:text-muted-foreground flex-1 py-0" // Reduced padding here
+          />
+        </div>
+      </div>
+      <div className="relative mt-2">
+        {open ? ( // Changed condition here: only check for open
+          <div className="absolute w-full z-50 top-0 rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in">
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                {selectables.map((option) => (
+                  <CommandItem
+                    key={option}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onSelect={() => {
+                      setInputValue("");
+                      onChange([...currentSelected, option]);
+                    }}
+                    className={"cursor-pointer"}
+                  >
+                    {option}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </div>
+        ) : null}
+      </div>
+    </Command>
+  );
+}
 
 export default function MultiSelectQuestions() {
   // Use the globally injected `props` object.
@@ -47,13 +142,8 @@ export default function MultiSelectQuestions() {
   
   // Initialize visible questions with the top-level questions
   useEffect(() => {
-    setVisibleQuestions(initialQuestions.map(q => ({
-      ...q,
-      level: 0,
-      parentId: null,
-      parentValue: null
-    })));
-  }, []);
+    setVisibleQuestions(initialQuestions.map(q => mapQuestionToState(q, 0, null, null)));
+  }, []); // Assuming initialQuestions is stable from props
 
   // Get action name from props or use default
   const submitActionName = props.submitActionName || "submit_selections";
@@ -144,92 +234,85 @@ export default function MultiSelectQuestions() {
   };
 
   // Update selections and dynamically adjust visible questions
-  const handleSelectChange = (questionId, value) => {
-    // First, find the question that was answered in the visible list
+  const handleSelectChange = (questionId, newValue) => {
     const questionIndex = visibleQuestions.findIndex(q => q.questionId === questionId);
     if (questionIndex === -1) return;
 
-    // Create a copy of the current questions
     let updatedQuestions = [...visibleQuestions];
     const answeredQuestionState = updatedQuestions[questionIndex];
 
-    // Update the state of the answered question (selected value, isOther)
-    if (value === "Other (Enter your own)" || value === "Yes, add additional info") {
+    if (answeredQuestionState.type === "multi_options") {
+      // Correctly check if "Other" or "Other (Enter your own)" is among the selected values
+      const hasOtherSelected = newValue.some(
+        option => option === "Other" || option === "Other (Enter your own)"
+      );
+      updatedQuestions[questionIndex] = {
+        ...answeredQuestionState,
+        selected: newValue, // newValue is an array from FancyMultiSelect
+        isOther: hasOtherSelected,
+        // Clear otherInputValue if "Other" is no longer selected, otherwise preserve it
+        otherInputValue: hasOtherSelected ? answeredQuestionState.otherInputValue : "",
+      };
+    } else if (newValue === "Other (Enter your own)" || newValue === "Yes, add additional info") {
       updatedQuestions[questionIndex] = {
         ...answeredQuestionState,
         isOther: true,
-        selected: "" // Clear selection for 'Other' initially
+        selected: "" 
       };
     } else {
       updatedQuestions[questionIndex] = {
         ...answeredQuestionState,
         isOther: false,
-        selected: value
+        selected: newValue
       };
     }
 
-    // Handle hierarchical questions if enabled
     if (enableHierarchy) {
-      // Find the definition of the question that was just answered using the helper
-      // Search within the initialQuestions structure (which uses 'subQuestions')
       const targetQuestionDefinition = findQuestionDefinition(initialQuestions, questionId);
-
-      // Remove any existing sub-questions that depended on the previous answer
-      const level = answeredQuestionState.level || 0;
+      const currentLevel = answeredQuestionState.level || 0;
+      
       const questionToRemoveIds = new Set();
-
-      // Find all child questions to remove (and their children recursively)
       const findChildrenToRemove = (parentId) => {
-        // Iterate through a *copy* of updatedQuestions or use indices carefully
-        // to avoid issues with modifying the array while iterating.
         const children = updatedQuestions.filter(q => q.parentId === parentId);
         for (const child of children) {
-           if (!questionToRemoveIds.has(child.questionId)) { // Avoid redundant checks/infinite loops
+           if (!questionToRemoveIds.has(child.questionId)) {
              questionToRemoveIds.add(child.questionId);
-             findChildrenToRemove(child.questionId); // Recursive call
+             findChildrenToRemove(child.questionId);
            }
         }
       };
-
-      // Start removal process from the current question's ID
       findChildrenToRemove(questionId);
-
-      // Filter out questions marked for removal
       let filteredQuestions = updatedQuestions.filter(q => !questionToRemoveIds.has(q.questionId));
 
-      // Add new sub-questions if the definition and the selected value have them
-      if (targetQuestionDefinition && targetQuestionDefinition.subQuestions && targetQuestionDefinition.subQuestions[value]) {
-        const subQuestionsToAdd = targetQuestionDefinition.subQuestions[value].map(sq => ({
-          // Map the definition (sq) to the state structure
-          questionId: sq.questionId, // Use questionId from the processed definition
-          question: sq.question,
-          type: sq.type,
-          options: sq.options,
-          selected: "", // Initial state
-          isOther: false, // Initial state
-          // *** CORRECTION: Use sq.subQuestions as processed by load_questions ***
-          subQuestions: sq.subQuestions || {}, // Pass definitions for the *next* level
-          // Hierarchy tracking
-          level: level + 1,
-          parentId: questionId,
-          parentValue: value
-        }));
-
-        // Find the index of the parent question *in the filtered list*
-        const parentIndexFiltered = filteredQuestions.findIndex(q => q.questionId === questionId);
-        if (parentIndexFiltered !== -1) {
-            // Insert sub-questions right after their parent question
-            filteredQuestions.splice(parentIndexFiltered + 1, 0, ...subQuestionsToAdd);
-        } else {
-            // Fallback: append if parent somehow disappeared (should not happen)
-            console.error("Parent question not found in filtered list during sub-question insertion.");
-            filteredQuestions = [...filteredQuestions, ...subQuestionsToAdd];
+      let allNewSubQuestions = [];
+      if (targetQuestionDefinition && targetQuestionDefinition.subQuestions) {
+        if (answeredQuestionState.type === "multi_options" && Array.isArray(newValue)) {
+          newValue.forEach(selectedOptionValue => {
+            if (targetQuestionDefinition.subQuestions[selectedOptionValue]) {
+              const subQsForThisOption = targetQuestionDefinition.subQuestions[selectedOptionValue].map(sqDef =>
+                mapQuestionToState(sqDef, currentLevel + 1, questionId, selectedOptionValue)
+              );
+              allNewSubQuestions.push(...subQsForThisOption);
+            }
+          });
+        } else if (typeof newValue === 'string' && targetQuestionDefinition.subQuestions[newValue]) {
+          allNewSubQuestions = targetQuestionDefinition.subQuestions[newValue].map(sqDef =>
+            mapQuestionToState(sqDef, currentLevel + 1, questionId, newValue)
+          );
         }
       }
 
+      if (allNewSubQuestions.length > 0) {
+        const parentIndexFiltered = filteredQuestions.findIndex(q => q.questionId === questionId);
+        if (parentIndexFiltered !== -1) {
+            filteredQuestions.splice(parentIndexFiltered + 1, 0, ...allNewSubQuestions);
+        } else {
+            console.error("Parent question not found in filtered list during sub-question insertion.");
+            filteredQuestions = [...filteredQuestions, ...allNewSubQuestions];
+        }
+      }
       setVisibleQuestions(filteredQuestions);
     } else {
-      // For non-hierarchical forms, just update the single question's state
       setVisibleQuestions(updatedQuestions);
     }
   };
@@ -239,6 +322,11 @@ export default function MultiSelectQuestions() {
     setVisibleQuestions(prev =>
       prev.map(q => {
         if (q.questionId === questionId) {
+          // If it's a multi_options question and "Other" is active, update otherInputValue
+          if (q.type === "multi_options" && q.isOther) {
+            return { ...q, otherInputValue: value };
+          }
+          // Otherwise, update selected (for "text" type or "options" type with "Other")
           return { ...q, selected: value };
         }
         return q;
@@ -249,14 +337,50 @@ export default function MultiSelectQuestions() {
   // When the user clicks Submit, send an internal message with the appropriate action
   const handleSubmit = () => {
     // Get answers, filtering out any parent/level info we added
-    const selections = visibleQuestions.map(({ questionId, question, type, options, selected, isOther }) => ({
-      questionId, 
-      question, 
-      type, 
-      options, 
-      selected, 
-      isOther
-    }));
+    const selections = visibleQuestions.map(q => {
+      const { questionId, question, type, options, selected, isOther, otherInputValue } = q;
+      
+      let finalSelectedValues = selected; // Default to current selected values
+
+      // For multi_options questions, if "Other" was selected and potentially text was entered for it
+      if (type === "multi_options" && isOther) {
+        let currentSelectionsFromMultiSelect = Array.isArray(selected) ? [...selected] : [];
+        
+        // Identify the placeholder string for "Other" (e.g., "Other", "Other (Enter your own)")
+        // This placeholder would have been selected in the FancyMultiSelect component.
+        // We use q.options (destructured as 'options') to find the exact placeholder string.
+        const otherOptionPlaceholder = options.find(opt => opt === "Other" || opt === "Other (Enter your own)");
+
+        // Remove the placeholder from the list, as we'll replace it with actual input if available.
+        if (otherOptionPlaceholder) {
+          currentSelectionsFromMultiSelect = currentSelectionsFromMultiSelect.filter(opt => opt !== otherOptionPlaceholder);
+        }
+
+        // If the user typed a non-empty value into the "Other" text input, add that value to the selections list.
+        if (otherInputValue && otherInputValue.trim() !== "") {
+          currentSelectionsFromMultiSelect.push(otherInputValue.trim());
+        }
+        // If otherInputValue is empty or only whitespace, the placeholder (if any) remains removed,
+        // and no new "other" value is added. This means selecting "Other" and typing nothing
+        // results in that "Other" choice not being included in the final list.
+        
+        finalSelectedValues = currentSelectionsFromMultiSelect;
+      }
+
+      const submissionEntry = {
+        questionId,
+        question,
+        type,
+        options, // Send the original options definition
+        selected: finalSelectedValues, // Send the final, potentially modified, list of selected values
+        isOther // Retain the isOther flag, it might provide useful context for the backend
+      };
+
+      // The separate `otherText` field previously used for multi_options is no longer needed,
+      // as its content is now directly incorporated into the `selected` array.
+
+      return submissionEntry;
+    });
     
     // Include file data in the payload
     callAction({
@@ -310,10 +434,21 @@ export default function MultiSelectQuestions() {
                   ))}
                 </SelectContent>
               </Select>
+            ) : q.type === "multi_options" ? (
+              <FancyMultiSelect
+                options={q.options || []}
+                selected={q.selected} // q.selected is expected to be an array by FancyMultiSelect
+                onChange={(selectedOptions) => handleSelectChange(q.questionId, selectedOptions)}
+                placeholder="Select options..."
+              />
             ) : null}
             {(q.isOther || q.type === "text") && (
               <textarea
-                value={q.selected}
+                value={
+                  (q.type === "multi_options" && q.isOther)
+                    ? q.otherInputValue
+                    : q.selected
+                }
                 placeholder="Enter your answer"
                 onChange={e => {
                   handleOtherChange(q.questionId, e.target.value);
