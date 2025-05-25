@@ -15,7 +15,7 @@
         "mandatory": true,
         "description": "Select the main format or channel for the content you want to generate (e.g., article, blog post, email, etc.)."
     },
-    "What is the purpose of this content?": {
+    "What is the purpose of this content?*": {
         "type": "options",
         "value": [
             "Introduce the airline's story, values, and purpose",

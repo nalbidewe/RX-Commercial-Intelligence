@@ -60,3 +60,9 @@ This document tracks the version history of the AI Content Gen App
 - **Release Date:** 2025-05-08
 - **Notes:**
     - Introduced **tone of voice selection** allowing users to choose between the default Riyadh Air corporate TOV or a new marketing/sales focused TOV aimed at upselling and enticing sales.
+
+## v1.5 - Multi-Selection Audience & Support Model
+- **Release Date:** 2025-05-25
+- **Notes:**
+    - Added **multi-selection support for audience selection**, allowing users to target multiple audience segments simultaneously for more comprehensive content creation.
+    - Introduced a **support model in the overview page** to guide users to the most appropriate tool based on their content creation needs.
