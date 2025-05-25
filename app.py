@@ -29,7 +29,7 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT, TOOL_GUIDANCE_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT, ARABIC_TRANSLATION_WELCOME_MESSAGE
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
@@ -568,6 +568,40 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
+@cl.cache # Cache the initialized chain
+def rx_tool_guidance(sys_msg: str = TOOL_GUIDANCE_SYS_PROMPT):
+    """
+    Initializes and returns a Langchain Runnable sequence (chain) for
+    tool guidance in the Welcome/Tool Overview profile.
+
+    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for guiding
+    users to select the most appropriate content generation tool.
+
+    Args:
+        sys_msg (str): The system prompt to configure the LLM. Defaults to
+                       TOOL_GUIDANCE_SYS_PROMPT from utils.
+
+    Returns:
+        Runnable: The initialized Langchain chain.
+    """
+    # Define the prompt template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    # Initialize the Azure OpenAI chat model
+    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
+                           temperature=0.3, # Slightly creative but focused temperature
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
+    # Use a simple string output parser
+    output_parser = StrOutputParser()
+    # Combine into a chain
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
     """
@@ -635,7 +669,7 @@ async def chat_profile(current_user: cl.User):
         ),
         cl.ChatProfile(
             name="Lifecycle Content Creation",
-            markdown_description="Create comprehensive lifecycle content for Riyadh Air, such as onboarding flows, customer journey communications, and process documentation.",
+            markdown_description="Create dynamic content such as emails, push notifications, and SMS messages to support various stages of the customer lifecycle with Riyadh Air.",
             icon="/public/lifecycle.svg"
         ),
         cl.ChatProfile(
@@ -709,12 +743,19 @@ async def on_chat_start():
 
     # --- Welcome / Tool Overview Profile ---
     if chat_profile == "Welcome / Tool Overview":
+        # Initialize or retrieve the cached chain for tool guidance
+        rx_tool_guide = rx_tool_guidance()
+        # Store the chain and an empty chat history in the user session
+        cl.user_session.set("rx_tool_guidance", rx_tool_guide)
+        cl.user_session.set("chat_history_tool_guidance", []) # Initialize history
+        
         # Show the custom landing page element
         overview_element = cl.CustomElement(
             name="ToolOverview", # Matches the frontend component name
             props={}
         )
-        overview_msg = cl.Message(content="", elements=[overview_element])
+
+        overview_msg = cl.Message(content="", elements=[overview_element], author="Riyadh Air")
         await overview_msg.send()
         return
 
@@ -739,7 +780,7 @@ async def on_chat_start():
             }
         )
         # Create a message containing the form element
-        form_msg = cl.Message(content="Please answer the following questions:", elements=[multi_select_element])
+        form_msg = cl.Message(content="Please answer the following questions, minimum 1 selection required:", elements=[multi_select_element])
         # Store the form message in the session (to remove it later)
         cl.user_session.set("form_msg", form_msg)
         # Send the form message to the user
@@ -775,7 +816,7 @@ async def on_chat_start():
             }
         )
         # Create and send the form message
-        form_msg = cl.Message(content="Please answer the following questions for lifecycle content:", elements=[multi_select_element])
+        form_msg = cl.Message(content="Please answer the following questions, minimum 1 selection required:", elements=[multi_select_element])
         cl.user_session.set("lifecycle_form_msg", form_msg) # Store form message
         await form_msg.send()
 
@@ -1160,6 +1201,40 @@ async def on_message(message: cl.Message):
     logging.info(f"Received message for profile '{chat_profile}': '{user_msg[:50]}...'") # Log truncated message
 
     # --- Route based on Chat Profile ---
+
+    # --- Welcome / Tool Overview Guidance ---
+    if chat_profile == "Welcome / Tool Overview":
+        rx_tool_guide = cl.user_session.get("rx_tool_guidance")
+        chat_history_tool_guidance = cl.user_session.get("chat_history_tool_guidance")
+        config = {"configurable": {"thread_id": message.thread_id}}
+
+        # Prepare query for the chain
+        query = {"chat_history": chat_history_tool_guidance, "input": user_msg}
+        msg_guidance = cl.Message(content="", author="Riyadh Air")
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                full_msg = ""
+                # Stream response
+                async for chunk in rx_tool_guide.astream(query, config=config):
+                    await msg_guidance.stream_token(chunk)
+                    full_msg += chunk
+
+                # Update history
+                chat_history_tool_guidance.append(HumanMessage(content=user_msg))
+                chat_history_tool_guidance.append(AIMessage(content=full_msg))
+                cl.user_session.set("chat_history_tool_guidance", chat_history_tool_guidance)
+
+                await msg_guidance.send()
+                logging.info("Successfully generated and streamed response for Tool Guidance.")
+                return # Exit on success
+
+            except Exception as e:
+                logging.error(f"Attempt {attempt + 1}/{max_retries}: Error during LLM call for Tool Guidance: {e}")
+                if attempt == max_retries - 1:
+                    msg_guidance.content = f"Sorry, I encountered an error after {max_retries} attempts. Please try again later."
+                    await msg_guidance.update()
 
     # --- Web & App Content Creation Follow-up ---
     if chat_profile == "Web & App Content Creation":

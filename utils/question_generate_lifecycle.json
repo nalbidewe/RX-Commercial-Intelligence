@@ -1,7 +1,7 @@
 {
   "questions": [
     {
-      "question": "What type of content do you need?",
+      "question": "What type of content do you need?*",
       "type": "options",
       "value": [
         "Email",
