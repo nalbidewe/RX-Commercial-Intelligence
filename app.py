@@ -414,6 +414,40 @@ def extract_text_from_file_data(file_data):
         logging.error(f"Error extracting text from file data: {e}")
         return ""
 
+@cl.cache # Cache the initialized chain
+def rx_tool_guidance(sys_msg: str = TOOL_GUIDANCE_SYS_PROMPT):
+    """
+    Initializes and returns a Langchain Runnable sequence (chain) for
+    tool guidance in the Welcome/Tool Overview profile.
+
+    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for guiding
+    users to select the most appropriate content generation tool.
+
+    Args:
+        sys_msg (str): The system prompt to configure the LLM. Defaults to
+                       TOOL_GUIDANCE_SYS_PROMPT from utils.
+
+    Returns:
+        Runnable: The initialized Langchain chain.
+    """
+    # Define the prompt template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    # Initialize the Azure OpenAI chat model
+    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
+                           temperature=0.3, # Slightly creative but focused temperature
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
+    # Use a simple string output parser
+    output_parser = StrOutputParser()
+    # Combine into a chain
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.cache # Cache the initialized chain for performance
 def rx_content_creator():
     """
@@ -559,40 +593,6 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     # Initialize the Azure OpenAI chat model
     llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
                            temperature=0, # Low temperature for more deterministic refinement
-                           api_key=azure_openai_api_key,
-                           api_version=openai_api_version,
-                           azure_endpoint=azure_openai_endpoint)
-    # Use a simple string output parser
-    output_parser = StrOutputParser()
-    # Combine into a chain
-    chain = prompt | llm | output_parser
-    return chain
-
-@cl.cache # Cache the initialized chain
-def rx_tool_guidance(sys_msg: str = TOOL_GUIDANCE_SYS_PROMPT):
-    """
-    Initializes and returns a Langchain Runnable sequence (chain) for
-    tool guidance in the Welcome/Tool Overview profile.
-
-    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for guiding
-    users to select the most appropriate content generation tool.
-
-    Args:
-        sys_msg (str): The system prompt to configure the LLM. Defaults to
-                       TOOL_GUIDANCE_SYS_PROMPT from utils.
-
-    Returns:
-        Runnable: The initialized Langchain chain.
-    """
-    # Define the prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_msg),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("user", "{input}")
-    ])
-    # Initialize the Azure OpenAI chat model
-    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
-                           temperature=0.3, # Slightly creative but focused temperature
                            api_key=azure_openai_api_key,
                            api_version=openai_api_version,
                            azure_endpoint=azure_openai_endpoint)
