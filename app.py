@@ -416,6 +416,40 @@ def extract_text_from_file_data(file_data):
         logging.error(f"Error extracting text from file data: {e}")
         return ""
 
+@cl.cache # Cache the initialized chain
+def rx_tool_guidance(sys_msg: str = TOOL_GUIDANCE_SYS_PROMPT):
+    """
+    Initializes and returns a Langchain Runnable sequence (chain) for
+    tool guidance in the Welcome/Tool Overview profile.
+
+    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for guiding
+    users to select the most appropriate content generation tool.
+
+    Args:
+        sys_msg (str): The system prompt to configure the LLM. Defaults to
+                       TOOL_GUIDANCE_SYS_PROMPT from utils.
+
+    Returns:
+        Runnable: The initialized Langchain chain.
+    """
+    # Define the prompt template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", sys_msg),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("user", "{input}")
+    ])
+    # Initialize the Azure OpenAI chat model
+    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
+                           temperature=0.3, # Slightly creative but focused temperature
+                           api_key=azure_openai_api_key,
+                           api_version=openai_api_version,
+                           azure_endpoint=azure_openai_endpoint)
+    # Use a simple string output parser
+    output_parser = StrOutputParser()
+    # Combine into a chain
+    chain = prompt | llm | output_parser
+    return chain
+
 @cl.cache # Cache the initialized chain for performance
 def rx_content_creator():
     """
@@ -561,41 +595,6 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     # Initialize the Azure OpenAI chat model
     llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
                            temperature=0, # Low temperature for more deterministic refinement
-                           api_key=azure_openai_api_key,
-                           api_version=openai_api_version,
-                           azure_endpoint=azure_openai_endpoint)
-    # Use a simple string output parser
-    output_parser = StrOutputParser()
-    # Combine into a chain
-    chain = prompt | llm | output_parser
-    return chain
-
-
-@cl.cache # Cache the initialized chain
-def rx_tool_guidance(sys_msg: str = TOOL_GUIDANCE_SYS_PROMPT):
-    """
-    Initializes and returns a Langchain Runnable sequence (chain) for
-    tool guidance in the Welcome/Tool Overview profile.
-
-    Uses AzureChatOpenAI (gpt-4o) with a specific system prompt for guiding
-    users to select the most appropriate content generation tool.
-
-    Args:
-        sys_msg (str): The system prompt to configure the LLM. Defaults to
-                       TOOL_GUIDANCE_SYS_PROMPT from utils.
-
-    Returns:
-        Runnable: The initialized Langchain chain.
-    """
-    # Define the prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", sys_msg),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("user", "{input}")
-    ])
-    # Initialize the Azure OpenAI chat model
-    llm = AzureChatOpenAI(model=azure_chat_model_name, # Use the standard gpt-4o model
-                           temperature=0.3, # Slightly creative but focused temperature
                            api_key=azure_openai_api_key,
                            api_version=openai_api_version,
                            azure_endpoint=azure_openai_endpoint)
@@ -1529,13 +1528,14 @@ async def on_message(message: cl.Message):
         }
         config = {"configurable": {"thread_id": message.thread_id}}
 
-        # Create message for streaming
-        msg_contentgen = cl.Message(content="", author="Riyadh Air")
+        # Create message for streaming with HTML code fence
+        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+        await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = ""
+                full_msg = "```html\n" # Initialize the full message with a code fence
                 # Stream response
                 async for chunk in rx_lifecycle_create.astream(query, config=config):
                     await msg_contentgen.stream_token(chunk)
@@ -1543,10 +1543,16 @@ async def on_message(message: cl.Message):
 
                 # Update history
                 chat_history_lifecycle_creator.append(HumanMessage(content=user_msg))
+                # Store the AI message, potentially including the specific system prompt used?
+                # For simplicity, just storing the content now.
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                await msg_contentgen.send()
+                # Close the Markdown code fence after streaming
+                await msg_contentgen.stream_token("\n```")
+                full_msg += "\n```" # Append closing code fence to the full message
+                msg_contentgen.content = full_msg # Set the final content
+                await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed follow-up response for Lifecycle content.")
                 return # Exit on success
 
