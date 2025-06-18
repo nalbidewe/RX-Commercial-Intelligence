@@ -1144,13 +1144,13 @@ async def on_submit_lifecycle_selections(action: cl.Action):
         }
 
         # Create message object for streaming response
-        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+        msg_contentgen = cl.Message(content="", author="Riyadh Air")
         await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = "```html\n" # Initialize the full message with a code fence
+                full_msg = "" # Initialize the full message with a code fence
                 # Stream the response
                 async for chunk in rx_lifecycle_create.astream(query):
                     await msg_contentgen.stream_token(chunk)
@@ -1163,9 +1163,7 @@ async def on_submit_lifecycle_selections(action: cl.Action):
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                # Close the Markdown code fence after streaming
-                await msg_contentgen.stream_token("\n```")
-                full_msg += "\n```" # Append closing code fence to the full message
+                full_msg += "" # Append closing code fence to the full message
                 msg_contentgen.content = full_msg # Set the final content
                 await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed response for Lifecycle content.")
@@ -1485,14 +1483,13 @@ async def on_message(message: cl.Message):
         }
         config = {"configurable": {"thread_id": message.thread_id}}
 
-        # Create message for streaming with HTML code fence
-        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+        msg_contentgen = cl.Message(content="", author="Riyadh Air")
         await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = "```html\n" # Initialize the full message with a code fence
+                full_msg = "" # Initialize the full message with a code fence
                 # Stream response
                 async for chunk in rx_lifecycle_create.astream(query, config=config):
                     await msg_contentgen.stream_token(chunk)
@@ -1505,9 +1502,7 @@ async def on_message(message: cl.Message):
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                # Close the Markdown code fence after streaming
-                await msg_contentgen.stream_token("\n```")
-                full_msg += "\n```" # Append closing code fence to the full message
+                full_msg += "" # Append closing code fence to the full message
                 msg_contentgen.content = full_msg # Set the final content
                 await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed follow-up response for Lifecycle content.")
