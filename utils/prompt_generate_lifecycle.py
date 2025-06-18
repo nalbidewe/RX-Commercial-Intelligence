@@ -144,7 +144,7 @@ Avoid words like "luxury" or "quality," as they can suggest a lack of confidence
 
 *Subject Line: 30–50 characters.
 *Preview Text: ~90 characters or fewer.
-*Greeting: Personalized salutation (e.g., “Hello <FirstName>”).
+*Greeting: Personalized salutation (e.g., “Hello {FirstName}”).
 *Body Content: Short paragraphs, headings, and bullet points. Provide flight or booking details as needed.
 *Call-to-Action (CTA): One clear, prominent action.
 *Footer: Contact info, social links, unsubscribe links.
@@ -187,22 +187,22 @@ c. **Ensure Logical Content Placement**
    - **Group related details together**.  
    - Example (incorrect usage):  
      ```
-     [Column - Left] Guest Name: <FirstName>  
-     [Column - Right] Booking Reference: <BookingNumber>  
+     [Column - Left] Guest Name: {FirstName}  
+     [Column - Right] Booking Reference: {BookingNumber}  
      ```
    - Correct usage:  
      ```
      [Column - Main Content]  
-     Guest Name: <FirstName>  
-     Booking Reference: <BookingNumber>  
+     Guest Name: {FirstName}  
+     Booking Reference: {BookingNumber}  
      ```
 
 d. **Use Placeholder Tags for Personal Data**
-   - **Never hardcode or generate fake personal details**—always use `<FirstName>`, `<OrderID>`, etc.
+   - **Never hardcode or generate fake personal details**—always use `{FirstName}`, `{OrderID}`, etc.
    - Example (correct usage):  
      ```
      [Column - Main Content]  
-     Hi <FirstName>, your refund of SAR <RefundAmount> has been processed.  
+     Hi {FirstName}, your refund of SAR {RefundAmount} has been processed.  
      ```
 
 e. **Adhere Strictly to the Requested Layout**
@@ -223,12 +223,12 @@ f. **Ensure CTAs Are Clearly Defined and Standalone**
      [Column - Support]  
         Need help?  
         Live chat is available 24/7  
-        <<Chat with Us>>
+        {{Chat with Us}}
 
         [Footer]  
         [Column - Left]  
             To avoid missing important updates, add us to your contacts.  
-            Your privacy is our priority. Read our <<Privacy Policy>> to learn more.  
+            Your privacy is our priority. Read our {{Privacy Policy}} to learn more.  
 
         [Column - Right]  
             **Riyadh Air** | General Authority of Civil Aviation Building 4075, P.O. Box 8427, Riyadh 13443, Kingdom of Saudi Arabia  
@@ -258,13 +258,13 @@ Used for **interactive buttons and links**.
 
 | **Tag**          | **Purpose** |
 |-----------------|------------|
-| `<<Submit Documents>>` | Directs guests to upload documents. |
-| `<<Share Feedback>>` | Redirects to a feedback form. |
-| `<<Manage Order>>` | Allows guests to modify bookings. |
-| `<<Pay Now>>` | Opens the payment page. |
-| `<<Chat with Us>>` | Initiates live chat support. |
-| `<<Contact Us>>` | Redirects to customer support. |
-| `<<Privacy Policy>>` | Links to the privacy policy. |
+| `{{Submit Documents}}` | Directs guests to upload documents. |
+| `{{Share Feedback}}` | Redirects to a feedback form. |
+| `{{Manage Order}}` | Allows guests to modify bookings. |
+| `{{Pay Now}}` | Opens the payment page. |
+| `{{Chat with Us}}` | Initiates live chat support. |
+| `{{Contact Us}}` | Redirects to customer support. |
+| `{{Privacy Policy}}` | Links to the privacy policy. |
 
 ---
 
@@ -273,23 +273,23 @@ These tags **must always be dynamically replaced** with real user data. **Never 
 
 | **Tag**           | **Purpose** |
 |------------------|------------|
-| `<FirstName>`    | Guest’s first name. |
-| `<LastName>`     | Guest’s last name. |
-| `<OrderID>`      | Unique identifier for an order. |
-| `<BookingNumber>` | Booking reference number. |
-| `<FlightDetails>` | Summarized flight itinerary. |
-| `<SeatNumber>`   | Assigned seat for the guest. |
-| `<BaggageInfo>`  | Details on baggage allowance. |
-| `<RefundAmount>` | Amount refunded to the guest. |
-| `<ARNNumber>`    | Acquirer Reference Number for refunds. |
-| `<InvoiceNumber>` | Unique invoice number. |
-| `<VATNumber>`    | Riyadh Air’s VAT registration number. |
-| `<OTPTTL>`       | Time-to-live for OTP expiration. |
-| `<OTPCode>`      | One-time password for authentication. |
+| `{FirstName}`    | Guest’s first name. |
+| `{LastName}`     | Guest’s last name. |
+| `{OrderID}`      | Unique identifier for an order. |
+| `{BookingNumber}` | Booking reference number. |
+| `{FlightDetails}` | Summarized flight itinerary. |
+| `{SeatNumber}`   | Assigned seat for the guest. |
+| `{BaggageInfo}`  | Details on baggage allowance. |
+| `{RefundAmount}` | Amount refunded to the guest. |
+| `{ARNNumber}`    | Acquirer Reference Number for refunds. |
+| `{InvoiceNumber}` | Unique invoice number. |
+| `{VATNumber}`    | Riyadh Air’s VAT registration number. |
+| `{OTPTTL}`       | Time-to-live for OTP expiration. |
+| `{OTPCode}`      | One-time password for authentication. |
 ---
 
 8. Personalization & Compliance**
-1. **Use placeholders for personal data**, such as `<FirstName>`, `<BookingNumber>`, or `<FlightDetails>`.  
+1. **Use placeholders for personal data**, such as `{FirstName}`, `{BookingNumber}`, or `{FlightDetails}`.  
 2. **Never invent or hardcode phone numbers, emails, or URLs**. Use placeholders: `[Phone Number]`, `[Email Address]`, or `[Website URL]` unless a valid one is explicitly provided.  
 3. **Always include an unsubscribe or opt-out method** where relevant:  
    - Example: `[Unsubscribe Link]` or `"Reply STOP to unsubscribe"`.  
@@ -444,7 +444,7 @@ Avoid words like "luxury" or "quality," as they can suggest a lack of confidence
 
 *Subject Line: 30–50 characters, compelling and benefit-driven.
 *Preview Text: ~90 characters or fewer, extending the intrigue of the subject line.
-*Greeting: Personalized salutation (e.g., “Hello <FirstName>,” or more engaging alternatives).
+*Greeting: Personalized salutation (e.g., “Hello {FirstName},” or more engaging alternatives).
 *Body Content: Short paragraphs, headings, and bullet points. Highlight benefits, offers, and value. Provide flight or booking details as needed, potentially with upsell opportunities.
 *Call-to-Action (CTA): One clear, prominent, and persuasive action (e.g., "Book Now," "Discover Offers," "Upgrade Your Trip").
 *Footer: Contact info, social links, unsubscribe links, terms and conditions for offers.
@@ -487,11 +487,11 @@ c. **Ensure Logical Content Placement**
    - **Group related details together**.  
 
 d. **Use Placeholder Tags for Personal Data**
-   - **Never hardcode or generate fake personal details**—always use `<FirstName>`, `<OrderID>`, etc.
+   - **Never hardcode or generate fake personal details**—always use `{FirstName}`, `{OrderID}`, etc.
    - Example (correct usage):  
      ```
      [Column - Main Content]  
-     Hi <FirstName>, your refund of SAR <RefundAmount> has been processed.  
+     Hi {FirstName}, your refund of SAR {RefundAmount} has been processed.  
      ```
 
 e. **Adhere Strictly to the Requested Layout**
@@ -512,12 +512,12 @@ f. **Ensure CTAs Are Clearly Defined and Standalone**
      [Column - Support]  
         Need help?  
         Live chat is available 24/7  
-        <<Chat with Us>>
+        {{Chat with Us}}
 
         [Footer]  
         [Column - Left]  
             To avoid missing important updates, add us to your contacts.  
-            Your privacy is our priority. Read our <<Privacy Policy>> to learn more.  
+            Your privacy is our priority. Read our {{Privacy Policy}} to learn more.  
 
         [Column - Right]  
             **Riyadh Air** | General Authority of Civil Aviation Building 4075, P.O. Box 8427, Riyadh 13443, Kingdom of Saudi Arabia  
@@ -548,35 +548,35 @@ Used for **interactive buttons and links**.
 
 | **Tag**          | **Purpose** |
 |-----------------|------------|
-| `<<Submit Documents>>` | Directs guests to upload documents. |
-| `<<Share Feedback>>` | Redirects to a feedback form. |
-| `<<Manage Order>>` | Allows guests to modify bookings. |
-| `<<Pay Now>>` | Opens the payment page. |
-| `<<Chat with Us>>` | Initiates live chat support. |
-| `<<Contact Us>>` | Redirects to customer support. |
-| `<<Privacy Policy>>` | Links to the privacy policy. |
-| `<<Book Now>>`       | Directs to booking page. |
-| `<<Explore Offers>>` | Directs to a sales/offers page. |
-| `<<Learn More>>`     | Directs to a page with more details on a product/service. |
+| `{{Submit Documents}}` | Directs guests to upload documents. |
+| `{{Share Feedback}}` | Redirects to a feedback form. |
+| `{{Manage Order}}` | Allows guests to modify bookings. |
+| `{{Pay Now}}` | Opens the payment page. |
+| `{{Chat with Us}}` | Initiates live chat support. |
+| `{{Contact Us}}` | Redirects to customer support. |
+| `{{Privacy Policy}}` | Links to the privacy policy. |
+| `{{Book Now}}`       | Directs to booking page. |
+| `{{Explore Offers}}` | Directs to a sales/offers page. |
+| `{{Learn More}}`     | Directs to a page with more details on a product/service. |
 ---
 c. Placeholder Tags for Personal Data (PII Tags)**  
 These tags **must always be dynamically replaced** with real user data. **Never generate fake PII**.
 
 | **Tag**           | **Purpose** |
 |------------------|------------|
-| `<FirstName>`    | Guest’s first name. |
-| `<LastName>`     | Guest’s last name. |
-| `<OrderID>`      | Unique identifier for an order. |
-| `<BookingNumber>` | Booking reference number. |
-| `<FlightDetails>` | Summarized flight itinerary. |
-| `<SeatNumber>`   | Assigned seat for the guest. |
-| `<BaggageInfo>`  | Details on baggage allowance. |
-| `<RefundAmount>` | Amount refunded to the guest. |
-| `<ARNNumber>`    | Acquirer Reference Number for refunds. |
-| `<InvoiceNumber>` | Unique invoice number. |
-| `<VATNumber>`    | Riyadh Air’s VAT registration number. |
-| `<OTPTTL>`       | Time-to-live for OTP expiration. |
-| `<OTPCode>`      | One-time password for authentication. |
+| `{FirstName}`    | Guest’s first name. |
+| `{LastName}`     | Guest’s last name. |
+| `{OrderID}`      | Unique identifier for an order. |
+| `{BookingNumber}` | Booking reference number. |
+| `{FlightDetails}` | Summarized flight itinerary. |
+| `{SeatNumber}`   | Assigned seat for the guest. |
+| `{BaggageInfo}`  | Details on baggage allowance. |
+| `{RefundAmount}` | Amount refunded to the guest. |
+| `{ARNNumber}`    | Acquirer Reference Number for refunds. |
+| `{InvoiceNumber}` | Unique invoice number. |
+| `{VATNumber}`    | Riyadh Air’s VAT registration number. |
+| `{OTPTTL}`       | Time-to-live for OTP expiration. |
+| `{OTPCode}`      | One-time password for authentication. |
 ---
 
 8. Personalization & Compliance**

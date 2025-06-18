@@ -66,3 +66,8 @@ This document tracks the version history of the AI Content Gen App
 - **Notes:**
     - Added **multi-selection support for audience selection**, allowing users to target multiple audience segments simultaneously for more comprehensive content creation.
     - Introduced a **support model in the overview page** to guide users to the most appropriate tool based on their content creation needs.
+
+## v1.6 - Lifecycle Tool HTML Block Removal
+- **Release Date:** 2025-06-18
+- **Notes:**
+    - Updated **lifecycle tool** to remove HTML blocks from generated content, ensuring cleaner and more readable output for emails, SMS, and push notifications.

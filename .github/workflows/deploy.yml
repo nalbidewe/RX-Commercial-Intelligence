@@ -2,42 +2,45 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "test" ]
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_REGISTRY: "neupaksregistry01"
-  CONTAINER_NAME: "rx-ai-content-gen-prod"
-  RESOURCE_GROUP: "rg-neu-p-dataapps-01"
-  WEB_APP_NAME: "rx-ai-content-gen"
+  AZURE_CONTAINER_REGISTRY: "registryneuaks01"
+  CONTAINER_NAME: "rx-content-test"
+  RESOURCE_GROUP: "rg-neu-n-dataapps-01"
+  WEB_APP_NAME: "rx-ai-content-gen-test"
 
 jobs:
   buildImage:
     permissions:
       contents: read
       id-token: write
-    runs-on: [self-hosted, prod-runner]
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout code
+      - name: Check out repo
         uses: actions/checkout@v4
-      # Logs in with your Azure credentials
+
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.Azure_Credential_P }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_NON_PROD }}
         
-      # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
         run: |
-          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{env.CONTAINER_NAME}}:${{ github.sha }} --registry ${{ env.AZURE_CONTAINER_REGISTRY }} -g ${{ env.RESOURCE_GROUP }} --agent-pool prodneuacrpool   .
+          az acr build --image ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{env.CONTAINER_NAME}}:${{ github.sha }} \
+                       --registry ${{ env.AZURE_CONTAINER_REGISTRY }} \
+                       -g ${{ env.RESOURCE_GROUP }} \
+                       --agent-pool nonprodneuacrpool \
+                       .
 
   deploy:
     permissions:
       actions: read
       contents: read
       id-token: write
-    runs-on: [self-hosted, prod-runner]
+    runs-on: self-hosted
     needs: [buildImage]
 
     steps:
@@ -46,14 +49,14 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.Azure_Credential_P }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_NON_PROD }}
 
       - name: Deploy to Azure Web App
         run: |
           az webapp config container set \
             --name ${{ env.WEB_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --container-image-name neupaksregistry01.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} \
-            --container-registry-url https://neupaksregistry01.azurecr.io \
-            --container-registry-user neupaksregistry01 \
-            --container-registry-password ${{ secrets.ACR_PASSWORD }}
+            --container-image-name registryneuaks01.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }} \
+            --container-registry-url https://registryneuaks01.azurecr.io \
+            --container-registry-user registryneuaks01 \
+            --container-registry-password ${{ secrets.ACR_PASSWORD_NON_PROD }}

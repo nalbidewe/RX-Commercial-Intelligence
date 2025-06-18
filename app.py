@@ -6,8 +6,6 @@ based on JSON files, file uploads (PDF, DOCX), text extraction, and interaction
 with Azure Key Vault and MongoDB.
 """
 import chainlit as cl
-from chainlit.user import User
-import jwt # For decoding JWT tokens
 import os
 import re
 import json
@@ -604,6 +602,7 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
+
 @cl.oauth_callback
 async def oauth_callback(
     provider_id: str,
@@ -1187,13 +1186,13 @@ async def on_submit_lifecycle_selections(action: cl.Action):
         }
 
         # Create message object for streaming response
-        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+        msg_contentgen = cl.Message(content="", author="Riyadh Air")
         await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = "```html\n" # Initialize the full message with a code fence
+                full_msg = "" # Initialize the full message with a code fence
                 # Stream the response
                 async for chunk in rx_lifecycle_create.astream(query):
                     await msg_contentgen.stream_token(chunk)
@@ -1206,9 +1205,7 @@ async def on_submit_lifecycle_selections(action: cl.Action):
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                # Close the Markdown code fence after streaming
-                await msg_contentgen.stream_token("\n```")
-                full_msg += "\n```" # Append closing code fence to the full message
+                full_msg += "" # Append closing code fence to the full message
                 msg_contentgen.content = full_msg # Set the final content
                 await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed response for Lifecycle content.")
@@ -1528,14 +1525,17 @@ async def on_message(message: cl.Message):
         }
         config = {"configurable": {"thread_id": message.thread_id}}
 
-        # Create message for streaming with HTML code fence
-        msg_contentgen = cl.Message(content="```html\n", author="Riyadh Air")
+
+        msg_contentgen = cl.Message(content="", author="Riyadh Air")
+
         await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                full_msg = "```html\n" # Initialize the full message with a code fence
+
+                full_msg = "" # Initialize the full message with a code fence
+
                 # Stream response
                 async for chunk in rx_lifecycle_create.astream(query, config=config):
                     await msg_contentgen.stream_token(chunk)
@@ -1548,9 +1548,8 @@ async def on_message(message: cl.Message):
                 chat_history_lifecycle_creator.append(AIMessage(content=full_msg))
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
-                # Close the Markdown code fence after streaming
-                await msg_contentgen.stream_token("\n```")
-                full_msg += "\n```" # Append closing code fence to the full message
+                full_msg += "" # Append closing code fence to the full message
+
                 msg_contentgen.content = full_msg # Set the final content
                 await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed follow-up response for Lifecycle content.")
