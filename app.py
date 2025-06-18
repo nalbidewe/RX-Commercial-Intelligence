@@ -6,6 +6,8 @@ based on JSON files, file uploads (PDF, DOCX), text extraction, and interaction
 with Azure Key Vault and MongoDB.
 """
 import chainlit as cl
+from chainlit.user import User
+import jwt # For decoding JWT tokens
 import os
 import re
 import json
