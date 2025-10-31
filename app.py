@@ -29,8 +29,8 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT, TOOL_GUIDANCE_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT, ARABIC_TRANSLATION_WELCOME_MESSAGE
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT, TOOL_GUIDANCE_SYS_PROMPT, LOYALTY_PREMIUM_CONTENT_GEN_SYS_PROMPT, LOYALTY_GENERAL_CONTENT_GEN_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     SYSTEM_LIFECYCLE_PROMPT,
@@ -96,6 +96,7 @@ def get_secret_value(secretName, client):
     return retrieved_secret.value
 
 # Initialize the Key Vault client
+print('en_tenant_id',en_tenant_id)
 client = init_key_vault_client(en_tenant_id, en_client_id, en_client_secret)
 
 # Retrieve Azure OpenAI and other necessary secrets from Key Vault
@@ -970,12 +971,18 @@ async def on_submit_selections(action: cl.Action):
     # Determine which system prompt to use based on tone of voice selection
     tone_of_voice = mapping.get("tone_of_voice", "Default Riyadh Air Tone of Voice")
     selected_sys_prompt = CONTENT_GEN_SYS_PROMPT
+
     if tone_of_voice == "Marketing/Sales Focused Tone of Voice":
         selected_sys_prompt = MARKETING_CONTENT_GEN_SYS_PROMPT
         logging.info("Using Marketing/Sales Focused Tone of Voice for Web/App content.")
+    elif tone_of_voice == "Premium / High-Tier Loyalty Tone of Voice":
+        selected_sys_prompt = LOYALTY_PREMIUM_CONTENT_GEN_SYS_PROMPT
+        logging.info("Using Premium / High-Tier Loyalty Tone of Voice for elite / frequent flyer messaging.")
+    elif tone_of_voice == "General Member Loyalty Tone of Voice":
+        selected_sys_prompt = LOYALTY_GENERAL_CONTENT_GEN_SYS_PROMPT
+        logging.info("Using General Member Loyalty Tone of Voice for broad / community-facing loyalty communications.")
     else:
         logging.info("Using Default Riyadh Air Tone of Voice for Web/App content.")
-
 
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
