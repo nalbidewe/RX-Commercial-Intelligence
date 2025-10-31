@@ -96,7 +96,6 @@ def get_secret_value(secretName, client):
     return retrieved_secret.value
 
 # Initialize the Key Vault client
-print('en_tenant_id',en_tenant_id)
 client = init_key_vault_client(en_tenant_id, en_client_id, en_client_secret)
 
 # Retrieve Azure OpenAI and other necessary secrets from Key Vault
@@ -983,7 +982,7 @@ async def on_submit_selections(action: cl.Action):
         logging.info("Using General Member Loyalty Tone of Voice for broad / community-facing loyalty communications.")
     else:
         logging.info("Using Default Riyadh Air Tone of Voice for Web/App content.")
-
+        
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
