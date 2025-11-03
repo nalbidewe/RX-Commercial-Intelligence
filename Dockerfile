@@ -1,4 +1,4 @@
-FROM python:3.11.10
+FROM registryneuaks01.azurecr.io/python:3.11.9
 
 WORKDIR /project
 
