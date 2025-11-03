@@ -31,8 +31,8 @@ import urllib.parse # For encoding MongoDB credentials
 from pymongo import MongoClient # For MongoDB interaction
 
 # Import system prompts and templates from utility files
-from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT, TOOL_GUIDANCE_SYS_PROMPT
 from utils.prompt_arabic_generate import ARABIC_TRANSLATION_SYS_PROMPT, ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT, ARABIC_TRANSLATION_WELCOME_MESSAGE
+from utils.prompt_generate import USER_INPUT, CONTENT_GEN_SYS_PROMPT, REFINE_SYS_PROMPT, MARKETING_CONTENT_GEN_SYS_PROMPT, TOOL_GUIDANCE_SYS_PROMPT, LOYALTY_PREMIUM_CONTENT_GEN_SYS_PROMPT, LOYALTY_GENERAL_CONTENT_GEN_SYS_PROMPT
 from utils.prompt_generate_lifecycle import (
     USER_INPUT_LIFECYCLE,
     SYSTEM_LIFECYCLE_PROMPT,
@@ -604,77 +604,35 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
-
-@cl.oauth_callback
-async def oauth_callback(
-    provider_id: str,
-    token: str,
-    raw_user_data: dict,
-    default_user: User,
-) -> User | None:
-  
+@cl.password_auth_callback
+def auth_callback(username: str, password: str):
     """
-    Handle the OAuth callback from Azure AD.
+    Chainlit authentication callback. Verifies user credentials against
+    the MongoDB 'Users' collection.
 
     Args:
-        provider_id: The provider ID ("azure-ad" or "azure-ad-hybrid")
-        token: The access or ID token
-        raw_user_data: The raw user data or claims from Azure AD
-        default_user: The default user created by Chainlit
+        username (str): The username entered by the user.
+        password (str): The password entered by the user.
 
     Returns:
-        A User object or None if authentication fails
+        cl.User | None: A Chainlit User object with metadata if authentication
+                       is successful, otherwise None.
     """
-    logging.info(f"Received raw_user_data from {provider_id}: {raw_user_data}")
+    # Find the user in the MongoDB collection
+    user = collection.find_one({"username": username})
 
-    # Handle Azure AD providers
-    if provider_id.startswith("azure-ad"):
-        # Use raw_user_data if present, otherwise decode token for claims
-        claims = raw_user_data or jwt.decode(token, options={"verify_signature": False})
-        # Extract common claims
-        user_id = claims.get("oid") or claims.get("sub")
-        email = claims.get("preferred_username") or claims.get("email")
-        name = claims.get("name")
-
-        # Assign Chainlit user identifier and metadata
-        default_user.identifier = user_id or default_user.identifier
-        default_user.metadata.update({
-            "email": email,
-            "name": name,
-            "provider": provider_id
-        })
-
-    return default_user
-
-# @cl.password_auth_callback
-# def auth_callback(username: str, password: str):
-#     """
-#     Chainlit authentication callback. Verifies user credentials against
-#     the MongoDB 'Users' collection.
-
-#     Args:
-#         username (str): The username entered by the user.
-#         password (str): The password entered by the user.
-
-#     Returns:
-#         cl.User | None: A Chainlit User object with metadata if authentication
-#                        is successful, otherwise None.
-#     """
-#     # Find the user in the MongoDB collection
-#     user = collection.find_one({"username": username})
-
-#     # Check if user exists and the password matches
-#     if user and user["password"] == password:
-#         # Return a Chainlit User object with metadata from the database
-#         return cl.User(
-#             identifier=username,
-#             metadata={
-#                 "role": user.get("role", "user"), # Default role to 'user' if not found
-#                 "provider": user.get("provider", "db") # Default provider to 'db'
-#             }
-#         )
-#     # Return None if authentication fails
-#     return None
+    # Check if user exists and the password matches
+    if user and user["password"] == password:
+        # Return a Chainlit User object with metadata from the database
+        return cl.User(
+            identifier=username,
+            metadata={
+                "role": user.get("role", "user"), # Default role to 'user' if not found
+                "provider": user.get("provider", "db") # Default provider to 'db'
+            }
+        )
+    # Return None if authentication fails
+    return None
 
 @cl.set_chat_profiles
 async def chat_profile(current_user: cl.User):
@@ -1014,13 +972,19 @@ async def on_submit_selections(action: cl.Action):
     # Determine which system prompt to use based on tone of voice selection
     tone_of_voice = mapping.get("tone_of_voice", "Default Riyadh Air Tone of Voice")
     selected_sys_prompt = CONTENT_GEN_SYS_PROMPT
+
     if tone_of_voice == "Marketing/Sales Focused Tone of Voice":
         selected_sys_prompt = MARKETING_CONTENT_GEN_SYS_PROMPT
         logging.info("Using Marketing/Sales Focused Tone of Voice for Web/App content.")
+    elif tone_of_voice == "Premium / High-Tier Loyalty Tone of Voice":
+        selected_sys_prompt = LOYALTY_PREMIUM_CONTENT_GEN_SYS_PROMPT
+        logging.info("Using Premium / High-Tier Loyalty Tone of Voice for elite / frequent flyer messaging.")
+    elif tone_of_voice == "General Member Loyalty Tone of Voice":
+        selected_sys_prompt = LOYALTY_GENERAL_CONTENT_GEN_SYS_PROMPT
+        logging.info("Using General Member Loyalty Tone of Voice for broad / community-facing loyalty communications.")
     else:
         logging.info("Using Default Riyadh Air Tone of Voice for Web/App content.")
-
-
+        
     if language_preference == "Arabic":
         langauge_output_instruction = "\n\nOutput in modern standard Arabic, following the provided lexicon and tone of voice below." + f"\n\n{ARABIC_TRANSLATION_WITHIN_TOOL_SYS_PROMPT}"
         
@@ -1527,17 +1491,13 @@ async def on_message(message: cl.Message):
         }
         config = {"configurable": {"thread_id": message.thread_id}}
 
-
         msg_contentgen = cl.Message(content="", author="Riyadh Air")
-
         await msg_contentgen.send() # Send an initial empty message to start the streaming
 
         max_retries = 3
         for attempt in range(max_retries):
             try:
-
                 full_msg = "" # Initialize the full message with a code fence
-
                 # Stream response
                 async for chunk in rx_lifecycle_create.astream(query, config=config):
                     await msg_contentgen.stream_token(chunk)
@@ -1551,7 +1511,6 @@ async def on_message(message: cl.Message):
                 cl.user_session.set("chat_history_lifecycle_creator", chat_history_lifecycle_creator)
 
                 full_msg += "" # Append closing code fence to the full message
-
                 msg_contentgen.content = full_msg # Set the final content
                 await msg_contentgen.update() # Update the message in the UI
                 logging.info("Successfully generated and streamed follow-up response for Lifecycle content.")

@@ -168,12 +168,14 @@
       "question": "What tone of voice should be used for this content?",
       "type": "options",
       "value": [
-        "Default Riyadh Air Tone of Voice",
-        "Marketing/Sales Focused Tone of Voice"
-      ],
+            "Default Riyadh Air Tone of Voice",
+            "Marketing/Sales Focused Tone of Voice",
+            "Premium / High-Tier Loyalty Tone of Voice",
+            "General Member Loyalty Tone of Voice"
+          ],
       "abbrev": "tone_of_voice",
       "mandatory": true,
-      "description": "Select the desired tone of voice. 'Default' is for general corporate content. 'Marketing/Sales' is for content aiming to promote or sell."
+      "description": "Choose the tone of voice for the generated content. 'Default Riyadh Air Tone of Voice' is formal, confident, and on-brand for corporate or operational messaging. 'Marketing/Sales Focused Tone of Voice' is persuasive and conversion-oriented, used for campaigns, promotions, and offers. 'Premium / High-Tier Loyalty Tone of Voice' is elevated, exclusive, and service-focused, used when speaking to elite / high-tier members. 'General Member Loyalty Tone of Voice' is warm, friendly, and relationship-building, used for communication with the broader loyalty base."
     },
     {
       "question": "Additional context or instructions for the model: (If any)",
@@ -193,5 +195,4 @@
     }
   ]
 }
-
 
