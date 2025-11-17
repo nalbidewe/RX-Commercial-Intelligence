@@ -604,35 +604,46 @@ def rx_translator(sys_msg: str = ARABIC_TRANSLATION_SYS_PROMPT):
     chain = prompt | llm | output_parser
     return chain
 
-@cl.password_auth_callback
-def auth_callback(username: str, password: str):
+@cl.oauth_callback
+async def oauth_callback(
+    provider_id: str,
+    token: str,
+    raw_user_data: dict,
+    default_user: User,
+) -> User | None:
+  
     """
-    Chainlit authentication callback. Verifies user credentials against
-    the MongoDB 'Users' collection.
+    Handle the OAuth callback from Azure AD.
 
     Args:
-        username (str): The username entered by the user.
-        password (str): The password entered by the user.
+        provider_id: The provider ID ("azure-ad" or "azure-ad-hybrid")
+        token: The access or ID token
+        raw_user_data: The raw user data or claims from Azure AD
+        default_user: The default user created by Chainlit
 
     Returns:
-        cl.User | None: A Chainlit User object with metadata if authentication
-                       is successful, otherwise None.
+        A User object or None if authentication fails
     """
-    # Find the user in the MongoDB collection
-    user = collection.find_one({"username": username})
+    logging.info(f"Received raw_user_data from {provider_id}: {raw_user_data}")
 
-    # Check if user exists and the password matches
-    if user and user["password"] == password:
-        # Return a Chainlit User object with metadata from the database
-        return cl.User(
-            identifier=username,
-            metadata={
-                "role": user.get("role", "user"), # Default role to 'user' if not found
-                "provider": user.get("provider", "db") # Default provider to 'db'
-            }
-        )
-    # Return None if authentication fails
-    return None
+    # Handle Azure AD providers
+    if provider_id.startswith("azure-ad"):
+        # Use raw_user_data if present, otherwise decode token for claims
+        claims = raw_user_data or jwt.decode(token, options={"verify_signature": False})
+        # Extract common claims
+        user_id = claims.get("oid") or claims.get("sub")
+        email = claims.get("preferred_username") or claims.get("email")
+        name = claims.get("name")
+
+        # Assign Chainlit user identifier and metadata
+        default_user.identifier = user_id or default_user.identifier
+        default_user.metadata.update({
+            "email": email,
+            "name": name,
+            "provider": provider_id
+        })
+
+    return default_user
 
 @cl.set_chat_profiles
 async def chat_profile(current_user: cl.User):
