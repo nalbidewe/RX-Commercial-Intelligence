@@ -9,6 +9,12 @@ import chainlit as cl
 from chainlit.user import User
 import jwt # For decoding JWT tokens
 import os
+
+from chainlit.server import app as fastapi_app
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from commercial_backend.api.routes.chat import router as commercial_router
 import re
 import json
 import logging
@@ -40,6 +46,37 @@ from utils.prompt_generate_lifecycle import (
     EMAIL_TEMPLATE
 )
 from utils.prompt_rx_policy import RX_POLICY_SYS_MSG, welcome_message
+
+# ── Commercial Intelligence routes ────────────────────────────────────────────
+# Mounts the React SPA at /commercial and the FastAPI coordinator at /api/chat.
+# The commercial_backend router already carries prefix="/api", so the endpoint
+# lands at /api/chat on this same server.
+fastapi_app.include_router(commercial_router)
+fastapi_app.mount(
+    "/commercial",
+    StaticFiles(directory="commercial-frontend/dist", html=True),
+    name="commercial",
+)
+
+@fastapi_app.get("/api/commercial/me")
+async def commercial_me(request: Request) -> JSONResponse:
+    """Return the signed-in user's UPN so the React SPA can include it in API calls."""
+    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if token:
+        try:
+            claims = jwt.decode(token, options={"verify_signature": False})
+            upn = (
+                claims.get("metadata", {}).get("email")
+                or claims.get("preferred_username")
+                or claims.get("email")
+                or ""
+            )
+            if upn:
+                return JSONResponse({"upn": upn})
+        except Exception:
+            pass
+    return JSONResponse({"upn": os.environ.get("LOCAL_DEV_UPN", "")})
+# ──────────────────────────────────────────────────────────────────────────────
 
 
 # Configure logging to output informational messages
