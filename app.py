@@ -10,7 +10,6 @@ from chainlit.user import User
 import jwt # For decoding JWT tokens
 import os
 from fastapi import Request, Response
-from fastapi.responses import RedirectResponse
 
 import re
 import json
@@ -650,11 +649,12 @@ async def oauth_callback(
 
 @cl.on_logout
 def on_logout(request: Request, response: Response):
-    # Clear Easy Auth session so signing out of Chainlit signs out everywhere
-    return RedirectResponse(
-        url="/.auth/logout?post_logout_redirect_uri=/",
-        status_code=303,
-    )
+    # Delete the Easy Auth session cookie so the commercial agent also logs out.
+    # We cannot redirect to /.auth/logout here because Chainlit's logout is an
+    # AJAX fetch() call — the resulting cross-origin redirect (to login.windows.net)
+    # is blocked by CORS. Deleting the cookie server-side achieves the same result.
+    response.delete_cookie("AppServiceAuthSession", path="/")
+    return {"success": True}
 
 
 @cl.set_chat_profiles
