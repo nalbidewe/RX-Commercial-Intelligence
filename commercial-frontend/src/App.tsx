@@ -25,7 +25,7 @@ export default function App() {
   // Redirect to Chainlit login if the session has expired or is missing
   useEffect(() => {
     resolveUpn().then((upn) => {
-      if (!upn) window.location.href = '/login';
+      if (!upn) window.location.href = '/.auth/login/aad?post_login_redirect_uri=/commercial/';
     });
   }, []);
 

@@ -61,7 +61,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Right — User chip */}
+        {/* Right — User chip + sign-out */}
         <div className="flex items-center justify-end gap-3">
           <div className="hidden sm:flex flex-col items-end leading-tight">
             <span className="text-sm font-medium text-rx-ink capitalize">
@@ -77,6 +77,13 @@ export default function Header() {
           >
             {initials || 'U'}
           </div>
+          <a
+            href="/.auth/logout?post_logout_redirect_uri=/commercial/"
+            className="text-xs text-rx-subtle hover:text-rx-purple transition-colors px-2 py-1 rounded hover:bg-rx-purple/5"
+            title="Sign out"
+          >
+            Sign out
+          </a>
         </div>
       </div>
     </header>
