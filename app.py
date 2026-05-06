@@ -9,6 +9,8 @@ import chainlit as cl
 from chainlit.user import User
 import jwt # For decoding JWT tokens
 import os
+from fastapi import Request, Response
+from fastapi.responses import RedirectResponse
 
 import re
 import json
@@ -644,6 +646,16 @@ async def oauth_callback(
         })
 
     return default_user
+
+
+@cl.on_logout
+def on_logout(request: Request, response: Response):
+    # Clear Easy Auth session so signing out of Chainlit signs out everywhere
+    return RedirectResponse(
+        url="/.auth/logout?post_logout_redirect_uri=/",
+        status_code=303,
+    )
+
 
 @cl.set_chat_profiles
 async def chat_profile(current_user: cl.User):

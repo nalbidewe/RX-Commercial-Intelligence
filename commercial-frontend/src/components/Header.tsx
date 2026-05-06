@@ -41,12 +41,11 @@ export default function Header() {
         {/* Left — Riyadh Air logo */}
         <div className="flex items-center justify-start">
           <img
-            src="/riyadh-air-logo.png"
+            src={`${import.meta.env.BASE_URL}riyadh-air-logo.png`}
             alt="Riyadh Air"
             className="h-10 w-auto"
             onError={(e) => {
-              // Fallback to the placeholder SVG if PNG hasn't been added yet
-              (e.currentTarget as HTMLImageElement).src = '/riyadh-air-logo.svg';
+              (e.currentTarget as HTMLImageElement).onerror = null;
             }}
           />
         </div>
