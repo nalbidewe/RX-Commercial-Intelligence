@@ -14,7 +14,14 @@ from chainlit.server import app as fastapi_app
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from commercial_backend.api.routes.chat import router as commercial_router
+
+try:
+    from commercial_backend.api.routes.chat import router as commercial_router
+    _commercial_router_loaded = True
+except Exception as _e:
+    _commercial_router_loaded = False
+    import logging as _log
+    _log.warning(f"Commercial backend unavailable: {_e}")
 import re
 import json
 import logging
@@ -48,15 +55,17 @@ from utils.prompt_generate_lifecycle import (
 from utils.prompt_rx_policy import RX_POLICY_SYS_MSG, welcome_message
 
 # ── Commercial Intelligence routes ────────────────────────────────────────────
-# Mounts the React SPA at /commercial and the FastAPI coordinator at /api/chat.
-# The commercial_backend router already carries prefix="/api", so the endpoint
-# lands at /api/chat on this same server.
-fastapi_app.include_router(commercial_router)
-fastapi_app.mount(
-    "/commercial",
-    StaticFiles(directory="commercial-frontend/dist", html=True),
-    name="commercial",
-)
+if _commercial_router_loaded:
+    fastapi_app.include_router(commercial_router)
+
+if os.path.isdir("commercial-frontend/dist"):
+    fastapi_app.mount(
+        "/commercial",
+        StaticFiles(directory="commercial-frontend/dist", html=True),
+        name="commercial",
+    )
+else:
+    logging.warning("commercial-frontend/dist not found — /commercial will not be served")
 
 @fastapi_app.get("/api/commercial/me")
 async def commercial_me(request: Request) -> JSONResponse:
