@@ -10,19 +10,6 @@ from chainlit.user import User
 import jwt # For decoding JWT tokens
 import os
 
-from chainlit.server import app as fastapi_app
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from starlette.routing import Mount
-
-try:
-    from commercial_backend.api.routes.chat import router as commercial_router
-    _commercial_router_loaded = True
-except Exception as _e:
-    _commercial_router_loaded = False
-    import logging as _log
-    _log.warning(f"Commercial backend unavailable: {_e}")
 import re
 import json
 import logging
@@ -54,41 +41,6 @@ from utils.prompt_generate_lifecycle import (
     EMAIL_TEMPLATE
 )
 from utils.prompt_rx_policy import RX_POLICY_SYS_MSG, welcome_message
-
-# ── Commercial Intelligence routes ────────────────────────────────────────────
-if _commercial_router_loaded:
-    fastapi_app.include_router(commercial_router)
-
-if os.path.isdir("commercial-frontend/dist"):
-    # Insert at position 0 so this mount is evaluated before Chainlit's root
-    # catch-all, which would otherwise intercept every /commercial/* request.
-    fastapi_app.routes.insert(
-        0,
-        Mount("/commercial", app=StaticFiles(directory="commercial-frontend/dist", html=True), name="commercial"),
-    )
-else:
-    logging.warning("commercial-frontend/dist not found — /commercial will not be served")
-
-@fastapi_app.get("/api/commercial/me")
-async def commercial_me(request: Request) -> JSONResponse:
-    """Return the signed-in user's UPN so the React SPA can include it in API calls."""
-    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    if token:
-        try:
-            claims = jwt.decode(token, options={"verify_signature": False})
-            upn = (
-                claims.get("metadata", {}).get("email")
-                or claims.get("preferred_username")
-                or claims.get("email")
-                or ""
-            )
-            if upn:
-                return JSONResponse({"upn": upn})
-        except Exception:
-            pass
-    return JSONResponse({"upn": os.environ.get("LOCAL_DEV_UPN", "")})
-# ──────────────────────────────────────────────────────────────────────────────
-
 
 # Configure logging to output informational messages
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s')
