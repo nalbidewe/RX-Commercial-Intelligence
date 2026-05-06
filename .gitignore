@@ -172,4 +172,3 @@ cython_debug/
 
 # Frontend
 commercial-frontend/node_modules
-commercial-frontend/dist
