@@ -172,3 +172,6 @@ cython_debug/
 
 # Frontend
 commercial-frontend/node_modules
+# The generic dist/ pattern above excludes this — un-ignore the built React app
+!commercial-frontend/dist/
+!commercial-frontend/dist/**
