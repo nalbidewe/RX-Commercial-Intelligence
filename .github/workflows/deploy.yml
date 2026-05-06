@@ -20,15 +20,6 @@ jobs:
 
     steps:
 
-      - name: Build and push image to ACR
-        run: |
-          az acr build \
-            --image ${{ env.IMAGE_NAME }}:${{ env.BUILD_VERSION }} \
-            --registry ${{ env.AZURE_CONTAINER_REGISTRY }} \
-            -g ${{ env.RESOURCE_GROUP }} \
-            --agent-pool nonprodneuacrpool \
-            --file ./Dockerfile .
-            
       - name: Checkout code
         uses: actions/checkout@v4
       # Logs in with your Azure credentials
