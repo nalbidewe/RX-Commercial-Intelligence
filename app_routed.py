@@ -22,19 +22,6 @@ app = FastAPI()
 async def health():
     return {"status": "ok"}
 
-@app.get("/debug")
-async def debug():
-    routes_info = [
-        {"type": type(r).__name__, "path": getattr(r, "path", repr(r))}
-        for r in app.routes
-    ]
-    return {
-        "commercial_router_loaded": _commercial_router_loaded,
-        "dist_path": _dist,
-        "dist_exists": os.path.isdir(_dist),
-        "routes": routes_info,
-    }
-
 
 # ── Commercial routes (registered BEFORE Chainlit catch-all) ──────────────────
 
