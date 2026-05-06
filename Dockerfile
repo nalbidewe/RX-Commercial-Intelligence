@@ -1,5 +1,5 @@
 # Stage 1: build the React commercial-intelligence frontend
-FROM node:20-alpine AS frontend-build
+FROM neupaksregistry01.azurecr.io/node:20-alpine AS frontend-build
 WORKDIR /frontend
 COPY commercial-frontend/package*.json ./
 RUN npm ci
