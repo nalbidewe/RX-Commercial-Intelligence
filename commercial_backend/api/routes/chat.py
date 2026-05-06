@@ -88,10 +88,9 @@ async def chat(
         )
     except Exception as exc:  # noqa: BLE001 — surface as Adaptive Card, never 500 to the UI
         logger.exception("coordinator_failed", error=str(exc))
+        error_detail = f"{type(exc).__name__}: {str(exc)[:300]}"
         return ChatResponse(
-            card=build_error_card(
-                "The agent pipeline failed unexpectedly. Please try again or contact the Cx Insights team."
-            ),
+            card=build_error_card(error_detail),
             dax="",
             summary="",
             data=[],
