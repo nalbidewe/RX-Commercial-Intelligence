@@ -6,7 +6,7 @@
   "description": "RX Commercial Intelligence — internal web client (Vite + React + TS + Tailwind).",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "tsc --noEmit -p tsconfig.json"
   },
