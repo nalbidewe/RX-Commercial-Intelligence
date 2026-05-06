@@ -14,6 +14,7 @@ from chainlit.server import app as fastapi_app
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.routing import Mount
 
 try:
     from commercial_backend.api.routes.chat import router as commercial_router
@@ -59,10 +60,11 @@ if _commercial_router_loaded:
     fastapi_app.include_router(commercial_router)
 
 if os.path.isdir("commercial-frontend/dist"):
-    fastapi_app.mount(
-        "/commercial",
-        StaticFiles(directory="commercial-frontend/dist", html=True),
-        name="commercial",
+    # Insert at position 0 so this mount is evaluated before Chainlit's root
+    # catch-all, which would otherwise intercept every /commercial/* request.
+    fastapi_app.routes.insert(
+        0,
+        Mount("/commercial", app=StaticFiles(directory="commercial-frontend/dist", html=True), name="commercial"),
     )
 else:
     logging.warning("commercial-frontend/dist not found — /commercial will not be served")
