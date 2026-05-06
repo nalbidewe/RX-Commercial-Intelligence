@@ -1,0 +1,6 @@
+commercial-frontend/node_modules
+commercial_backend/__pycache__
+**/__pycache__
+**/*.pyc
+.git
+.env
