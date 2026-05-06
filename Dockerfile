@@ -25,6 +25,6 @@ ENV LOG_LEVEL="INFO"
 
 RUN chmod -R 0744 /project
 
-CMD ["python", "-m", "chainlit", "run", "app.py", "-w", "--host", "0.0.0.0"]
+CMD ["python", "-m", "chainlit", "run", "app_routed.py", "-w", "--host", "0.0.0.0"]
 
 EXPOSE 8000
