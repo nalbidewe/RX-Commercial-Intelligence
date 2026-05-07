@@ -5,6 +5,7 @@ import InputBar from './components/InputBar';
 import OutputCard from './components/OutputCard';
 import LoadingCard from './components/LoadingCard';
 import EmptyState from './components/EmptyState';
+import LoginScreen from './components/LoginScreen';
 import { DEFAULT_FAQS } from './components/FAQCard';
 import { postChat, ChatResponse } from './api/client';
 import { deriveChart } from './lib/deriveChart';
@@ -14,13 +15,28 @@ interface OutputEntry extends ChatResponse {
   timestamp: number;
 }
 
+// Auth states: checking /api/commercial/me → authenticated or needs login
+type AuthState = 'checking' | 'authenticated' | 'unauthenticated';
+
 export default function App() {
+  // ── All hooks must be declared before any early return ──
+  const [authState, setAuthState] = useState<AuthState>('checking');
   const [input, setInput] = useState('');
   const [outputs, setOutputs] = useState<OutputEntry[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Check authentication via Easy Auth /me endpoint on mount
+  useEffect(() => {
+    fetch('/api/commercial/me', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data: { upn?: string }) => {
+        setAuthState(data.upn ? 'authenticated' : 'unauthenticated');
+      })
+      .catch(() => setAuthState('unauthenticated'));
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,16 +61,23 @@ export default function App() {
     }
   }
 
+  // ── Auth gates — safe to early-return after all hooks ──
+  if (authState === 'checking') {
+    return <div className="min-h-screen bg-rx-cream" />;
+  }
+
+  if (authState === 'unauthenticated') {
+    return <LoginScreen onLocalDevBypass={() => setAuthState('authenticated')} />;
+  }
+
+  // ── Main app ──
   const isEmpty = outputs.length === 0 && !loading && !error;
-  // Only surface suggestion pills after the first exchange — the EmptyState
-  // already shows them on the initial screen so showing them twice is redundant.
   const showSuggestions = outputs.length > 0 || loading;
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header onLogout={() => setAuthState('unauthenticated')} />
 
-      {/* Single centred column — no sidebar once chat starts */}
       <main className="flex-1 mx-auto max-w-3xl w-full px-6 py-6">
         <div className="space-y-6">
           {isEmpty && <EmptyState onPick={setInput} />}
@@ -80,7 +103,6 @@ export default function App() {
                 transition={{ duration: 0.35 }}
                 className="space-y-3"
               >
-                {/* User bubble — right aligned */}
                 <div className="flex justify-end">
                   <div className="max-w-[75%] bg-rx-purple text-white rounded-2xl rounded-tr-sm px-4 py-3">
                     <p className="text-sm leading-relaxed">{o.question}</p>
@@ -88,7 +110,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* AI response — left aligned */}
                 <div className="flex justify-start">
                   <div className="w-full">
                     <OutputCard

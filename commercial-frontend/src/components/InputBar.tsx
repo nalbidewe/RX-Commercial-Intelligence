@@ -60,13 +60,13 @@ export default function InputBar({
             <p className="text-[11px] uppercase tracking-wide text-rx-subtle font-semibold mb-1.5">
               Suggested questions
             </p>
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex flex-col gap-1.5 max-h-16 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:theme(colors.rx-purple/30)_transparent]">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => onSuggest(s)}
-                  className="shrink-0 text-xs rounded-full border border-rx-purple/30 bg-white px-3 py-1.5 text-rx-purple hover:bg-rx-purple/10 whitespace-nowrap transition"
+                  className="text-left text-xs rounded-lg border border-rx-purple/30 bg-white px-3 py-1.5 text-rx-purple hover:bg-rx-purple/10 transition"
                 >
                   {s}
                 </button>

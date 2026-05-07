@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-/**
- * Header — RX-branded top bar.
- *
- * Layout (3-column grid):
- *   [logo, left]    [title, centered]    [user, right]
- *
- * The user is derived from the Easy Auth `/.auth/me` endpoint that
- * Container Apps exposes automatically. During local dev the fetch fails
- * silently and falls back to a preview UPN.
- */
-export default function Header() {
+interface HeaderProps {
+  onLogout: () => void;
+}
+
+export default function Header({ onLogout }: HeaderProps) {
   const [user, setUser] = useState<string>('preview@vendor.riyadhair.com');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,11 +17,29 @@ export default function Header() {
         if (cancelled || !data) return;
         if (data.upn) setUser(data.upn);
       })
-      .catch(() => {/* ignore — fallback stays as default */});
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  function handleLogout() {
+    setMenuOpen(false);
+    if (import.meta.env.DEV) {
+      onLogout();
+    } else {
+      window.location.href = `/.auth/logout?post_logout_redirect_uri=${encodeURIComponent('/commercial/')}`;
+    }
+  }
 
   const displayName = user.split('@')[0]?.replace(/\./g, ' ') ?? user;
   const initials = user
@@ -44,9 +58,7 @@ export default function Header() {
             src={`${import.meta.env.BASE_URL}riyadh-air-logo.png`}
             alt="Riyadh Air"
             className="h-10 w-auto"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).onerror = null;
-            }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; }}
           />
         </div>
 
@@ -60,29 +72,43 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Right — User chip + sign-out */}
-        <div className="flex items-center justify-end gap-3">
-          <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-sm font-medium text-rx-ink capitalize">
-              {displayName}
-            </span>
-            <span className="text-[11px] text-rx-subtle truncate max-w-[180px]">
-              {user}
-            </span>
+        {/* Right — Profile avatar with dropdown */}
+        <div className="flex items-center justify-end" ref={menuRef}>
+          <div className="hidden sm:flex flex-col items-end leading-tight mr-3">
+            <span className="text-sm font-medium text-rx-ink capitalize">{displayName}</span>
+            <span className="text-[11px] text-rx-subtle truncate max-w-[180px]">{user}</span>
           </div>
-          <div
-            className="h-9 w-9 rounded-full bg-rx-purple text-rx-cream font-semibold flex items-center justify-center text-sm shadow-sm"
+
+          {/* Avatar button */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="h-9 w-9 rounded-full bg-rx-purple text-rx-cream font-semibold flex items-center justify-center text-sm shadow-sm hover:bg-rx-purpleDark transition"
             title={user}
           >
             {initials || 'U'}
-          </div>
-          <a
-            href="/.auth/logout?post_logout_redirect_uri=/commercial/"
-            className="text-xs text-rx-subtle hover:text-rx-purple transition-colors px-2 py-1 rounded hover:bg-rx-purple/5"
-            title="Sign out"
-          >
-            Sign out
-          </a>
+          </button>
+
+          {/* Dropdown */}
+          {menuOpen && (
+            <div className="absolute top-16 right-6 w-56 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-xs text-rx-subtle truncate">{user}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-rx-ink hover:bg-gray-50 transition text-left"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

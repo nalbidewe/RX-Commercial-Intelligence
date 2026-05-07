@@ -55,6 +55,26 @@ def _user_dependency(request: Request) -> AuthenticatedUser:
     return get_authenticated_user(request)
 
 
+class MeResponse(BaseModel):
+    upn: str
+
+
+@router.get("/commercial/me", response_model=MeResponse)
+async def me(user: AuthenticatedUser = Depends(_user_dependency)) -> MeResponse:
+    """Return the signed-in user's UPN.
+
+    Used by the React frontend to:
+      1. Confirm the user is authenticated (404 → show login screen).
+      2. Display the user's email in the header.
+
+    Locally, returns LOCAL_DEV_UPN from .env.
+    In production, returns the UPN injected by Azure Easy Auth.
+    """
+    if not user.upn:
+        raise HTTPException(status_code=404, detail="Not authenticated")
+    return MeResponse(upn=user.upn)
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     payload: ChatRequest,

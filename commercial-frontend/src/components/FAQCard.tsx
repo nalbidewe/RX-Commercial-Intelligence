@@ -22,8 +22,10 @@ export default function FAQCard({ question, onPick }: FAQCardProps) {
 }
 
 export const DEFAULT_FAQS: string[] = [
-  'What was load factor on RUH–DXB last week?',
-  'Top 5 routes by revenue in the last 30 days',
-  'Yield trend for RUH–LHR over the last quarter',
-  'Which routes underperformed budget last month?',
+  'What is the breakdown of the sales between Website and App in the last month?',
+  'What is our ancillary revenue per ancillary passenger on direct bookings',
+  'What is our direct sales value this month',
+  'How many business class tickets were sold from 1st April to 30 April 2026 for London to Riyadh route',
+  'What is our direct sales value this month, and how does it compare to last month and the same period last year?',
+  'What percentage of our bookings are coming through direct and indirect channels',
 ];

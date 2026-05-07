@@ -19,10 +19,10 @@ import structlog
 from azure.identity.aio import DefaultAzureCredential
 from azure.ai.projects.aio import AIProjectClient
 
-from src.bot.turn_state import ConversationState
-from src.bot.adaptive_cards import build_insight_card, build_error_card
-from src.orchestrator.response_formatter import parse_analyst_response
-from src.tools.pbi_execute_query import execute_dax_query
+from commercial_backend.bot.turn_state import ConversationState
+from commercial_backend.bot.adaptive_cards import build_insight_card, build_error_card, build_greeting_card
+from commercial_backend.orchestrator.response_formatter import parse_analyst_response
+from commercial_backend.tools.pbi_execute_query import execute_dax_query
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +35,13 @@ _FOUNDRY_TIMEOUT = httpx.Timeout(timeout=600.0, connect=30.0)
 DAX_START_MARKER = "=== DAX START ==="
 DAX_END_MARKER = "=== DAX END ==="
 CANNOT_ANSWER_SENTINEL = "CANNOT_ANSWER"
+
+# Simple greeting patterns — answered immediately without calling any LLM.
+_GREETING_RE = re.compile(
+    r"^\s*(hi|hello|hey|howdy|greetings|good\s+(morning|afternoon|evening|day)|"
+    r"what'?s\s+up|sup|yo|salaam|مرحبا|اهلا)\W*\s*$",
+    re.IGNORECASE,
+)
 
 _DAX_BLOCK_RE = re.compile(
     rf"{re.escape(DAX_START_MARKER)}\s*(.*?)\s*{re.escape(DAX_END_MARKER)}",
@@ -71,6 +78,11 @@ class Coordinator:
     ) -> dict:
         """Run the full pipeline and return a dict with 'card', 'dax', 'summary'."""
         credential = DefaultAzureCredential()
+
+        # Short-circuit for greetings — no LLM call needed.
+        if _GREETING_RE.match(user_question.strip()):
+            logger.info("greeting_detected", question=user_question[:60])
+            return {"card": build_greeting_card(), "dax": "", "summary": "", "data": []}
 
         try:
             async with AIProjectClient(

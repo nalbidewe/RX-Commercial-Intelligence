@@ -116,6 +116,49 @@ def build_insight_card(
     }
 
 
+def build_greeting_card() -> dict:
+    """Friendly introduction shown when the user sends a greeting."""
+    return {
+        "type": "AdaptiveCard",
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "version": "1.5",
+        "body": [
+            {
+                "type": "TextBlock",
+                "text": "👋 Hi! I'm your Commercial Intelligence Companion",
+                "weight": "Bolder",
+                "size": "Large",
+                "color": "Accent",
+            },
+            {
+                "type": "TextBlock",
+                "text": "Your Commercial Intelligence assistant for Riyadh Air.",
+                "wrap": True,
+                "spacing": "Small",
+            },
+            {
+                "type": "TextBlock",
+                "text": "I can help you explore:",
+                "weight": "Bolder",
+                "spacing": "Medium",
+            },
+            {
+                "type": "TextBlock",
+                "text": "• Revenue & sales by channel (Website, App, indirect)\n• Ancillary revenue and per-passenger metrics\n• Load factor and yield by route\n• Booking trends — daily, monthly, year-on-year\n• Business vs economy class performance",
+                "wrap": True,
+                "spacing": "None",
+            },
+            {
+                "type": "TextBlock",
+                "text": "How can I help you today?",
+                "wrap": True,
+                "weight": "Bolder",
+                "spacing": "Medium",
+            },
+        ],
+    }
+
+
 def build_error_card(message: str) -> dict:
     """Build an Adaptive Card for error states."""
     return {
