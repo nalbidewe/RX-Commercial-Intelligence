@@ -19,7 +19,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from commercial_backend.api.routes import chat as chat_routes
+from src.api.routes import chat as chat_routes
 
 logger = structlog.get_logger(__name__)
 

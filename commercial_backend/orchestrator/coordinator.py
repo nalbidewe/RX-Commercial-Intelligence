@@ -14,16 +14,22 @@ DAX extraction and execution between the two agents.
 import json
 import os
 import re
+import httpx
 import structlog
 from azure.identity.aio import DefaultAzureCredential
 from azure.ai.projects.aio import AIProjectClient
 
-from commercial_backend.bot.turn_state import ConversationState
-from commercial_backend.bot.adaptive_cards import build_insight_card, build_error_card
-from commercial_backend.orchestrator.response_formatter import parse_analyst_response
-from commercial_backend.tools.pbi_execute_query import execute_dax_query
+from src.bot.turn_state import ConversationState
+from src.bot.adaptive_cards import build_insight_card, build_error_card
+from src.orchestrator.response_formatter import parse_analyst_response
+from src.tools.pbi_execute_query import execute_dax_query
 
 logger = structlog.get_logger(__name__)
+
+# Foundry agent call timeouts — generous read timeout (agents can take 60-90s+
+# to generate long DAX queries) but tight connect timeout to fail fast on
+# network issues from outside-region clients.
+_FOUNDRY_TIMEOUT = httpx.Timeout(timeout=600.0, connect=30.0)
 
 # Marker-delimited DAX contract between RX-QueryEngine and the Coordinator.
 DAX_START_MARKER = "=== DAX START ==="
@@ -78,7 +84,7 @@ class Coordinator:
                 qe_resp = await openai_client.responses.create(
                     input=user_question,
                     extra_body=_agent_reference(self.query_engine_agent_name),
-                    timeout=30.0,
+                    timeout=_FOUNDRY_TIMEOUT,
                 )
                 qe_response = qe_resp.output_text or ""
 
@@ -127,7 +133,7 @@ class Coordinator:
                 analyst_resp = await openai_client.responses.create(
                     input=analyst_prompt,
                     extra_body=_agent_reference(self.analyst_agent_name),
-                    timeout=30.0,
+                    timeout=_FOUNDRY_TIMEOUT,
                 )
                 analyst_response = analyst_resp.output_text or ""
 
