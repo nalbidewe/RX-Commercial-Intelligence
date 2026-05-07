@@ -6,7 +6,7 @@ import OutputCard from './components/OutputCard';
 import LoadingCard from './components/LoadingCard';
 import EmptyState from './components/EmptyState';
 import { DEFAULT_FAQS } from './components/FAQCard';
-import { postChat, resolveUpn, ChatResponse } from './api/client';
+import { postChat, ChatResponse } from './api/client';
 import { deriveChart } from './lib/deriveChart';
 
 interface OutputEntry extends ChatResponse {
@@ -21,13 +21,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  // Redirect to Chainlit login if the session has expired or is missing
-  useEffect(() => {
-    resolveUpn().then((upn) => {
-      if (!upn) window.location.href = '/.auth/login/aad?post_login_redirect_uri=/commercial/';
-    });
-  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
