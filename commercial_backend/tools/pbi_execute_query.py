@@ -47,8 +47,14 @@ async def execute_dax_query(
     }
 
     # Enforce RLS — MI authenticates, but the query runs as the real user
-    if user_principal_name:
+    # if user_principal_name:
+    #     payload["impersonatedUser"] = {"username": user_principal_name}
+    _DISABLE_IMPERSONATION = os.environ.get("PBI_DISABLE_IMPERSONATION", "").lower() in ("1", "true", "yes")
+
+    if user_principal_name and not _DISABLE_IMPERSONATION:
+
         payload["impersonatedUser"] = {"username": user_principal_name}
+
 
     try:
         token = await get_pbi_access_token()

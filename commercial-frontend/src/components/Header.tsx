@@ -73,7 +73,7 @@ export default function Header({ onLogout }: HeaderProps) {
         </div>
 
         {/* Right — Profile avatar with dropdown */}
-        <div className="flex items-center justify-end" ref={menuRef}>
+        <div className="relative flex items-center justify-end" ref={menuRef}>
           <div className="hidden sm:flex flex-col items-end leading-tight mr-3">
             <span className="text-sm font-medium text-rx-ink capitalize">{displayName}</span>
             <span className="text-[11px] text-rx-subtle truncate max-w-[180px]">{user}</span>
@@ -91,7 +91,7 @@ export default function Header({ onLogout }: HeaderProps) {
 
           {/* Dropdown */}
           {menuOpen && (
-            <div className="absolute top-16 right-6 w-56 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
+            <div className="absolute top-full mt-2 right-0 w-56 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-gray-100">
                 <p className="text-xs text-rx-subtle truncate">{user}</p>
               </div>
