@@ -20,6 +20,14 @@ ENV FOUNDRY_ANALYST_AGENT_ID="RX-Analyst"
 ENV PBI_WORKSPACE_ID="4435d932-4c62-46fd-ba3f-dd41a0d6d2f4"
 ENV PBI_DATASET_ID="192c798b-0a94-4791-8520-0922452167aa"
 
+# ── PBI auth: user-mode (delegated, MSAL cache) ──
+# Set PBI_AUTH_MODE=mi to fall back to managed identity (legacy path).
+ENV PBI_AUTH_MODE="user"
+ENV PBI_USER_CLIENT_ID="e4c08c4a-a398-4955-af2f-0f63f892d049"
+ENV PBI_USER_TENANT_ID="a85be8e2-4f70-43ec-a1fe-17302d408155"
+ENV PBI_USER_UPN="nalbidewe@vendor.riyadhair.com"
+ENV PBI_CACHE_PATH="/project/.pbi_cache.json"
+
 # ── App ──
 ENV LOG_LEVEL="INFO"
 
