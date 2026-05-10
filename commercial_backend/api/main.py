@@ -1,7 +1,7 @@
 """FastAPI entrypoint for the RX Commercial Intelligence web app.
 
 Run locally:
-    uvicorn src.api.main:app --reload --port 8000
+    uvicorn commercial_backend.api.main:app --reload --port 8000
 
 In Container Apps, this is the backend sidecar listening on localhost:8000.
 The frontend nginx sidecar reverse-proxies /api/* to here.
@@ -19,7 +19,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import chat as chat_routes
+from commercial_backend.api.routes import chat as chat_routes
 
 logger = structlog.get_logger(__name__)
 

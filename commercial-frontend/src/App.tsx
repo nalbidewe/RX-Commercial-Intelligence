@@ -25,6 +25,7 @@ export default function App() {
   const [outputs, setOutputs] = useState<OutputEntry[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pendingQuestion, setPendingQuestion] = useState('');
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +48,7 @@ export default function App() {
     if (!question || loading) return;
 
     setLoading(true);
+    setPendingQuestion(question);
     setError(null);
     setInput('');
 
@@ -127,8 +129,8 @@ export default function App() {
           {loading && (
             <div className="space-y-3">
               <div className="flex justify-end">
-                <div className="max-w-[75%] bg-rx-purple/80 text-white rounded-2xl rounded-tr-sm px-4 py-3">
-                  <p className="text-sm opacity-70">Sending…</p>
+                <div className="max-w-[75%] bg-rx-purple text-white rounded-2xl rounded-tr-sm px-4 py-3">
+                  <p className="text-sm leading-relaxed">{pendingQuestion}</p>
                 </div>
               </div>
               <LoadingCard />
