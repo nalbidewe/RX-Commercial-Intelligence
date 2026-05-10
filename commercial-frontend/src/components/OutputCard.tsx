@@ -8,15 +8,19 @@ interface OutputCardProps {
   dax: string;
   summary: string;
   chart?: DerivedChart | null;
+  // [DEBUG] only populated when COMMERCIAL_DEBUG=true on backend
+  debugInfo?: { error_type: string; error_message: string; traceback: string } | null;
 }
 
 /**
  * Renders an Adaptive Card returned by /api/chat using the official
  * `adaptivecards` lib. Chart (if any) is rendered below the card content.
  */
-export default function OutputCard({ card, dax, summary, chart }: OutputCardProps) {
+export default function OutputCard({ card, dax, summary, chart, debugInfo }: OutputCardProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [copyStatus, setCopyStatus] = useState<'' | 'dax' | 'summary'>('');
+  // [DEBUG]
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -91,7 +95,26 @@ export default function OutputCard({ card, dax, summary, chart }: OutputCardProp
             {copyStatus === 'summary' ? 'Copied!' : 'Copy summary'}
           </button>
         )}
+        {/* [DEBUG] only shown when backend returns debug_info */}
+        {debugInfo && (
+          <button
+            onClick={() => setShowDebug((v) => !v)}
+            className="text-xs rounded-md border border-red-300 px-2 py-1 text-red-600 hover:bg-red-50"
+          >
+            {showDebug ? 'Hide Debug' : 'Show Debug'}
+          </button>
+        )}
       </div>
+
+      {/* [DEBUG] collapsible traceback panel */}
+      {debugInfo && showDebug && (
+        <div className="px-4 py-3 bg-red-50 border-t border-red-200">
+          <p className="text-xs font-semibold text-red-700 mb-1">{debugInfo.error_type}: {debugInfo.error_message}</p>
+          <pre className="text-[11px] text-red-800 whitespace-pre-wrap break-all leading-relaxed overflow-auto max-h-64">
+            {debugInfo.traceback}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }

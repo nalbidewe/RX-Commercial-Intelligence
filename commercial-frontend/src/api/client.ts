@@ -14,6 +14,8 @@ export interface ChatResponse {
   data: Record<string, unknown>[];
   conversation_id: string;
   user: string;
+  // [DEBUG] only present when COMMERCIAL_DEBUG=true on the backend
+  debug_info?: { error_type: string; error_message: string; traceback: string } | null;
 }
 
 let _upnPromise: Promise<string> | null = null;

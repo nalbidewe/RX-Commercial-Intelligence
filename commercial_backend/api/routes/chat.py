@@ -7,6 +7,8 @@ returns the existing Adaptive Card JSON the Teams bot used to render.
 
 from __future__ import annotations
 
+import os
+import traceback
 import uuid
 
 import structlog
@@ -17,6 +19,10 @@ from commercial_backend.api.middleware.easy_auth import AuthenticatedUser, get_a
 from commercial_backend.bot.adaptive_cards import build_error_card
 from commercial_backend.bot.turn_state import get_state
 from commercial_backend.orchestrator.coordinator import Coordinator
+
+# [DEBUG] set COMMERCIAL_DEBUG=true in .env or Azure Container App env vars to
+# expose full tracebacks in the frontend error panel. Remove before go-live.
+_DEBUG = os.environ.get("COMMERCIAL_DEBUG", "").lower() in ("1", "true", "yes")
 
 logger = structlog.get_logger(__name__)
 
@@ -49,6 +55,8 @@ class ChatResponse(BaseModel):
     data: list[dict] = []
     conversation_id: str
     user: str
+    # [DEBUG] only populated when COMMERCIAL_DEBUG=true
+    debug_info: dict | None = None
 
 
 def _user_dependency(request: Request) -> AuthenticatedUser:
@@ -108,14 +116,25 @@ async def chat(
         )
     except Exception as exc:  # noqa: BLE001 — surface as Adaptive Card, never 500 to the UI
         logger.exception("coordinator_failed", error=str(exc))
-        error_detail = f"{type(exc).__name__}: {str(exc)[:300]}"
+        error_detail = f"{type(exc).__name__}: {str(exc)}"
+
+        # [DEBUG] build full traceback payload when debug mode is on
+        debug_info = None
+        if _DEBUG:
+            debug_info = {
+                "error_type": type(exc).__name__,
+                "error_message": str(exc),
+                "traceback": traceback.format_exc(),
+            }
+
         return ChatResponse(
-            card=build_error_card(error_detail),
+            card=build_error_card(error_detail, debug_info=debug_info),
             dax="",
             summary="",
             data=[],
             conversation_id=conversation_id,
             user=user.upn,
+            debug_info=debug_info,
         )
 
     return ChatResponse(

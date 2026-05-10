@@ -159,31 +159,56 @@ def build_greeting_card() -> dict:
     }
 
 
-def build_error_card(message: str) -> dict:
+def build_error_card(message: str, debug_info: dict | None = None) -> dict:
     """Build an Adaptive Card for error states."""
+    body: list[dict] = [
+        {
+            "type": "TextBlock",
+            "text": "❌ Something went wrong",
+            "weight": "Bolder",
+            "color": "Attention",
+        },
+        {
+            "type": "TextBlock",
+            "text": message,
+            "wrap": True,
+        },
+        {
+            "type": "TextBlock",
+            "text": "Try rephrasing your question or contact the Cx Insights team.",
+            "isSubtle": True,
+            "size": "Small",
+        },
+    ]
+
+    # [DEBUG] collapsible traceback block — only present when debug_info is passed
+    if debug_info:
+        body.append({
+            "type": "ActionSet",
+            "actions": [
+                {
+                    "type": "Action.ToggleVisibility",
+                    "title": "Show Debug Details",
+                    "targetElements": ["debugBlock"],
+                }
+            ],
+        })
+        body.append({
+            "type": "TextBlock",
+            "id": "debugBlock",
+            "text": f"Step: {debug_info.get('error_type', '')}\n\n{debug_info.get('traceback', '')}",
+            "wrap": True,
+            "fontType": "Monospace",
+            "size": "Small",
+            "isVisible": False,
+            "color": "Attention",
+        })
+
     return {
         "type": "AdaptiveCard",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
         "version": "1.5",
-        "body": [
-            {
-                "type": "TextBlock",
-                "text": "❌ Something went wrong",
-                "weight": "Bolder",
-                "color": "Attention",
-            },
-            {
-                "type": "TextBlock",
-                "text": message,
-                "wrap": True,
-            },
-            {
-                "type": "TextBlock",
-                "text": "Try rephrasing your question or contact the Cx Insights team.",
-                "isSubtle": True,
-                "size": "Small",
-            },
-        ],
+        "body": body,
     }
 
 

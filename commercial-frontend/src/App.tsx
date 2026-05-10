@@ -119,6 +119,7 @@ export default function App() {
                       dax={o.dax}
                       summary={o.summary}
                       chart={chart}
+                      debugInfo={o.debug_info}
                     />
                   </div>
                 </div>

@@ -84,13 +84,18 @@ class Coordinator:
             logger.info("greeting_detected", question=user_question[:60])
             return {"card": build_greeting_card(), "dax": "", "summary": "", "data": []}
 
+        # [DEBUG] tracks the active pipeline step for error attribution
+        _step = "init"
+
         try:
             async with AIProjectClient(
                 endpoint=self.project_endpoint,
                 credential=credential,
             ) as project_client:
                 openai_client = project_client.get_openai_client()
+
                 # -- Step 1: RX-QueryEngine (Prompt Agent -> DAX text) --
+                _step = "query_engine"
                 logger.info("invoking_query_engine", question=user_question[:100])
 
                 qe_resp = await openai_client.responses.create(
@@ -106,6 +111,7 @@ class Coordinator:
                 )
 
                 # -- Step 2: Parse + execute DAX --
+                _step = "dax_extraction"
                 dax = self._extract_dax_from_markers(qe_response)
 
                 if dax.strip().upper() == CANNOT_ANSWER_SENTINEL:
@@ -128,12 +134,14 @@ class Coordinator:
                     )
                     return {"card": card, "dax": "", "summary": ""}
 
+                _step = "pbi_execution"
                 logger.info("executing_dax", dax=dax[:200])
                 pbi_result = await execute_dax_query(
                     dax, user_principal_name=user_principal_name
                 )
 
                 # -- Step 3: RX-Analyst (Prompt Agent -> commercial interpretation) --
+                _step = "analyst"
                 logger.info("invoking_analyst")
 
                 analyst_prompt = (
@@ -155,6 +163,7 @@ class Coordinator:
                 )
 
                 # -- Step 4: Format -> Adaptive Card --
+                _step = "response_formatting"
                 parsed = parse_analyst_response(analyst_response)
 
                 card = build_insight_card(
@@ -174,6 +183,11 @@ class Coordinator:
                     # Shape: list of {col: value, ...} dicts. May be empty.
                     "data": pbi_result.get("tables", []) if isinstance(pbi_result, dict) else [],
                 }
+
+        except Exception:
+            # [DEBUG] re-raise with step context so chat.py can log it precisely
+            logger.error("coordinator_step_failed", step=_step, exc_info=True)
+            raise
 
         finally:
             await credential.close()
