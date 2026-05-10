@@ -170,6 +170,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
+# Power BI MSAL token cache (contains refresh token — NEVER commit)
+.pbi_cache.json
+
 # Frontend
 commercial-frontend/node_modules
 # The generic dist/ pattern above excludes this — un-ignore the built React app
