@@ -48,6 +48,31 @@ _DAX_BLOCK_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
+# ── Domain routing ───────────────────────────────────────────────────────
+# Keyword fast-path — used before falling back to an LLM tiebreaker classifier.
+# Matches are case-insensitive.
+_GX_KEYWORDS_RE = re.compile(
+    r"\b(satisfaction|csat|nps|survey(s)?|sentiment|review(s)?|jamila|"
+    r"guest\s+experience|response\s+rate|cabin\s+rating|service\s+quality|"
+    r"feedback|stars?\s+rating|complaint(s)?|net\s+promoter)\b",
+    re.IGNORECASE,
+)
+_COMMERCIAL_KEYWORDS_RE = re.compile(
+    r"\b(revenue|booking(s)?|load\s+factor|yield|rask|prask|fare(s)?|"
+    r"ancillary|channel|distribution|forecast|capacity|asks|rpks|"
+    r"market\s+share|pos\b|point\s+of\s+sale|sector\s+revenue|seat\s+sold)\b",
+    re.IGNORECASE,
+)
+
+_DOMAIN_CLASSIFIER_PROMPT = (
+    "You are a router for an airline analytics chatbot. Classify the user's "
+    "question into exactly ONE of these domains and reply with only that single "
+    "word (lowercase, no punctuation):\n"
+    "  - commercial         (revenue, bookings, load factor, yield, fares, capacity)\n"
+    "  - guest_experience   (satisfaction surveys, sentiment, reviews, CSAT, response rate)\n"
+    "\nIf truly ambiguous, default to 'commercial'."
+)
+
 
 def _agent_reference(name: str) -> dict:
     """Build the extra_body payload for invoking a Foundry Prompt Agent by name."""
@@ -66,9 +91,70 @@ class Coordinator:
 
     def __init__(self) -> None:
         self.project_endpoint = os.environ["FOUNDRY_PROJECT_ENDPOINT"]
-        # Display names of the Foundry Prompt Agents (e.g. "RX-QueryEngine", "RX-Analyst")
-        self.query_engine_agent_name = os.environ["FOUNDRY_QUERY_ENGINE_AGENT_ID"]
-        self.analyst_agent_name = os.environ["FOUNDRY_ANALYST_AGENT_ID"]
+        # Per-domain config: each entry maps to its own pair of Foundry Prompt
+        # Agents and its own Power BI workspace + dataset. Add new domains here.
+        self.domains = {
+            "commercial": {
+                "query_engine": os.environ["FOUNDRY_QUERY_ENGINE_AGENT_ID"],
+                "analyst": os.environ["FOUNDRY_ANALYST_AGENT_ID"],
+                "workspace_id": os.environ["PBI_WORKSPACE_ID"],
+                "dataset_id": os.environ["PBI_DATASET_ID"],
+                "cannot_answer_message": (
+                    "The Routes Insights - Flyr model does not contain the data "
+                    "needed to answer that question."
+                ),
+            },
+            "guest_experience": {
+                "query_engine": os.environ.get(
+                    "FOUNDRY_GX_QUERY_ENGINE_AGENT_ID", "RX-GX-QEngine"
+                ),
+                "analyst": os.environ.get(
+                    "FOUNDRY_GX_ANALYST_AGENT_ID", "RX-GX-Analyst"
+                ),
+                "workspace_id": os.environ.get("PBI_GX_WORKSPACE_ID", ""),
+                "dataset_id": os.environ.get("PBI_GX_DATASET_ID", ""),
+                "cannot_answer_message": (
+                    "The RX Guest Experience model does not contain the data "
+                    "needed to answer that question."
+                ),
+            },
+        }
+        # Back-compat aliases — kept so any existing tests/imports still work.
+        self.query_engine_agent_name = self.domains["commercial"]["query_engine"]
+        self.analyst_agent_name = self.domains["commercial"]["analyst"]
+
+    async def _classify_domain(self, question: str, openai_client) -> str:
+        """Decide which domain config (commercial vs guest_experience) to use.
+
+        Two-stage:
+          1. Keyword fast-path — deterministic, ~0ms.
+          2. LLM tiebreaker     — only if both regexes miss or both hit.
+        """
+        gx_hit = bool(_GX_KEYWORDS_RE.search(question))
+        comm_hit = bool(_COMMERCIAL_KEYWORDS_RE.search(question))
+
+        if gx_hit and not comm_hit:
+            logger.info("domain_classified", method="keyword", domain="guest_experience")
+            return "guest_experience"
+        if comm_hit and not gx_hit:
+            logger.info("domain_classified", method="keyword", domain="commercial")
+            return "commercial"
+
+        # Ambiguous (both or neither) — fall back to a tiny LLM call.
+        try:
+            resp = await openai_client.responses.create(
+                model="gpt-4o-mini",
+                input=f"{_DOMAIN_CLASSIFIER_PROMPT}\n\nQuestion: {question}",
+                timeout=httpx.Timeout(timeout=15.0, connect=5.0),
+            )
+            answer = (resp.output_text or "").strip().lower()
+            domain = "guest_experience" if "guest" in answer else "commercial"
+            logger.info("domain_classified", method="llm", raw=answer[:40], domain=domain)
+            return domain
+        except Exception as e:
+            # On any failure, default to commercial (the original, well-tested path).
+            logger.warning("domain_classifier_failed", error=str(e), default="commercial")
+            return "commercial"
 
     async def process(
         self,
@@ -94,13 +180,23 @@ class Coordinator:
             ) as project_client:
                 openai_client = project_client.get_openai_client()
 
-                # -- Step 1: RX-QueryEngine (Prompt Agent -> DAX text) --
+                # -- Step 0: classify domain (commercial vs guest_experience) --
+                _step = "domain_classification"
+                domain = await self._classify_domain(user_question, openai_client)
+                cfg = self.domains[domain]
+
+                # -- Step 1: QueryEngine (Prompt Agent -> DAX text) --
                 _step = "query_engine"
-                logger.info("invoking_query_engine", question=user_question[:100])
+                logger.info(
+                    "invoking_query_engine",
+                    domain=domain,
+                    agent=cfg["query_engine"],
+                    question=user_question[:100],
+                )
 
                 qe_resp = await openai_client.responses.create(
                     input=user_question,
-                    extra_body=_agent_reference(self.query_engine_agent_name),
+                    extra_body=_agent_reference(cfg["query_engine"]),
                     timeout=_FOUNDRY_TIMEOUT,
                 )
                 qe_response = qe_resp.output_text or ""
@@ -116,17 +212,15 @@ class Coordinator:
 
                 if dax.strip().upper() == CANNOT_ANSWER_SENTINEL:
                     reason = self._extract_reason(qe_response)
-                    logger.info("query_engine_cannot_answer", reason=reason)
-                    message = (
-                        reason
-                        or "The Routes Insights - Flyr model does not contain the data needed to answer that question."
-                    )
+                    logger.info("query_engine_cannot_answer", domain=domain, reason=reason)
+                    message = reason or cfg["cannot_answer_message"]
                     card = build_error_card(message)
                     return {"card": card, "dax": "", "summary": reason or ""}
 
                 if not dax:
                     logger.error(
                         "query_engine_missing_dax_markers",
+                        domain=domain,
                         response=qe_response[:500],
                     )
                     card = build_error_card(
@@ -135,14 +229,17 @@ class Coordinator:
                     return {"card": card, "dax": "", "summary": ""}
 
                 _step = "pbi_execution"
-                logger.info("executing_dax", dax=dax[:200])
+                logger.info("executing_dax", domain=domain, dax=dax[:200])
                 pbi_result = await execute_dax_query(
-                    dax, user_principal_name=user_principal_name
+                    dax,
+                    user_principal_name=user_principal_name,
+                    workspace_id=cfg["workspace_id"] or None,
+                    dataset_id=cfg["dataset_id"] or None,
                 )
 
-                # -- Step 3: RX-Analyst (Prompt Agent -> commercial interpretation) --
+                # -- Step 3: Analyst (Prompt Agent -> domain-specific narrative) --
                 _step = "analyst"
-                logger.info("invoking_analyst")
+                logger.info("invoking_analyst", domain=domain, agent=cfg["analyst"])
 
                 analyst_prompt = (
                     f"Original question: {user_question}\n\n"
@@ -152,7 +249,7 @@ class Coordinator:
 
                 analyst_resp = await openai_client.responses.create(
                     input=analyst_prompt,
-                    extra_body=_agent_reference(self.analyst_agent_name),
+                    extra_body=_agent_reference(cfg["analyst"]),
                     timeout=_FOUNDRY_TIMEOUT,
                 )
                 analyst_response = analyst_resp.output_text or ""
