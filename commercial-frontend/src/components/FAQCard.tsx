@@ -22,10 +22,10 @@ export default function FAQCard({ question, onPick }: FAQCardProps) {
 }
 
 export const DEFAULT_FAQS: string[] = [
-  'What is the breakdown of the sales between Website and App in the last month?',
-  'What is our ancillary revenue per ancillary passenger on direct bookings',
-  'What is our direct sales value this month',
-  'How many business class tickets were sold from 1st April to 30 April 2026 for London to Riyadh route',
-  'What is our direct sales value this month, and how does it compare to last month and the same period last year?',
-  'What percentage of our bookings are coming through direct and indirect channels',
+  "Provide a report of all the metrics where I am not meeting the targets in April'26",
+  'Are our direct and indirect channels revenue converting as they should? Compared to Target',
+  'Which days of the week do we have the most revenue?',
+  'What are the top indirect distributors last week?',
+  'What is the Guest Satisfaction Score for the past month?',
+  'How many surveys do we receive from Jamila and what is the percentage of the sentiment?',
 ];

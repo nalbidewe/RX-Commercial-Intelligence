@@ -125,26 +125,38 @@ def build_greeting_card() -> dict:
         "body": [
             {
                 "type": "TextBlock",
-                "text": "👋 Hi! I'm your Commercial Intelligence Companion",
+                "text": "👋 Hi! I'm your RX Insights Companion",
                 "weight": "Bolder",
                 "size": "Large",
                 "color": "Accent",
             },
             {
                 "type": "TextBlock",
-                "text": "Your Commercial Intelligence assistant for Riyadh Air.",
+                "text": "Your Commercial Intelligence & Guest Experience assistant for Riyadh Air.",
                 "wrap": True,
                 "spacing": "Small",
             },
             {
                 "type": "TextBlock",
-                "text": "I can help you explore:",
+                "text": "📊 Commercial Intelligence",
                 "weight": "Bolder",
                 "spacing": "Medium",
             },
             {
                 "type": "TextBlock",
                 "text": "• Revenue & sales by channel (Website, App, indirect)\n• Ancillary revenue and per-passenger metrics\n• Load factor and yield by route\n• Booking trends — daily, monthly, year-on-year\n• Business vs economy class performance",
+                "wrap": True,
+                "spacing": "None",
+            },
+            {
+                "type": "TextBlock",
+                "text": "🌟 Guest Experience",
+                "weight": "Bolder",
+                "spacing": "Medium",
+            },
+            {
+                "type": "TextBlock",
+                "text": "• Guest Satisfaction Score (CSAT) by route and cabin — vs last year\n• Survey response rate and total survey volume\n• Sentiment analysis on guest reviews (positive / negative / neutral)\n• Journey stage breakdown: lounge, cabin crew, boarding, dining & more\n• Attribute-level scores (e.g. crew friendliness, lounge comfort, check-in efficiency)",
                 "wrap": True,
                 "spacing": "None",
             },

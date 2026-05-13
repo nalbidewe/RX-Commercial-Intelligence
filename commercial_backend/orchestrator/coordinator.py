@@ -52,8 +52,8 @@ _DAX_BLOCK_RE = re.compile(
 # Keyword fast-path — used before falling back to an LLM tiebreaker classifier.
 # Matches are case-insensitive.
 _GX_KEYWORDS_RE = re.compile(
-    r"\b(satisfaction|csat|nps|survey(s)?|sentiment|review(s)?|jamila|"
-    r"guest\s+experience|response\s+rate|cabin\s+rating|service\s+quality|"
+    r"\b(satisf\w+|csat|nps|survey(s)?|sentiment|review(s)?|jamila|"
+    r"guest(\s+experience)?|response\s+rate|cabin\s+rating|service\s+quality|"
     r"feedback|stars?\s+rating|complaint(s)?|net\s+promoter)\b",
     re.IGNORECASE,
 )
@@ -143,7 +143,7 @@ class Coordinator:
         # Ambiguous (both or neither) — fall back to a tiny LLM call.
         try:
             resp = await openai_client.responses.create(
-                model="gpt-4o-mini",
+                model="gpt-5.4-mini",
                 input=f"{_DOMAIN_CLASSIFIER_PROMPT}\n\nQuestion: {question}",
                 timeout=httpx.Timeout(timeout=15.0, connect=5.0),
             )
