@@ -18,15 +18,22 @@ PBI_API_BASE = "https://api.powerbi.com/v1.0/myorg"
 
 
 async def execute_dax_query(
-    dax_query: str, user_principal_name: str | None = None
+    dax_query: str,
+    user_principal_name: str | None = None,
+    workspace_id: str | None = None,
+    dataset_id: str | None = None,
 ) -> dict:
-    """Execute a DAX query against the configured Power BI dataset.
+    """Execute a DAX query against a Power BI dataset.
 
     Args:
         dax_query: A valid DAX query string (e.g. EVALUATE SUMMARIZECOLUMNS(...))
         user_principal_name: UPN (email) of the Teams user. When provided, the
             query is executed under PBI Row-Level Security for that user via
             the ``impersonatedUser`` API parameter.
+        workspace_id: PBI workspace (group) GUID. Defaults to ``PBI_WORKSPACE_ID``
+            env var (commercial dataset) when not provided. Pass explicitly when
+            targeting a different domain (e.g. Guest Experience).
+        dataset_id: PBI dataset GUID. Defaults to ``PBI_DATASET_ID`` env var.
 
     Returns:
         dict with keys:
@@ -36,8 +43,8 @@ async def execute_dax_query(
             - row_count (int): number of result rows
             - error (str | None): error message if failed
     """
-    workspace_id = os.environ["PBI_WORKSPACE_ID"]
-    dataset_id = os.environ["PBI_DATASET_ID"]
+    workspace_id = workspace_id or os.environ["PBI_WORKSPACE_ID"]
+    dataset_id = dataset_id or os.environ["PBI_DATASET_ID"]
 
     url = f"{PBI_API_BASE}/groups/{workspace_id}/datasets/{dataset_id}/executeQueries"
 
